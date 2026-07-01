@@ -36,8 +36,8 @@ Ursprünglich entwickelt von **Christian Kater** als Java-8/JavaFX-Desktop-Proje
 | Bereich | Stand |
 |---|---|
 | Legacy (Java/JavaFX) | funktionsfähig, unverändert in [Legacy/](Legacy/) |
-| Rework — Backend (Fastify + Prisma) | Saison anlegen (inkl. automatischem Spielplan), Ergebniserfassung, Tabelle, Einzelwertung, Mannschaft bearbeiten, Migrationsskript für `database.db` — alles verifiziert |
-| Rework — Frontend (React + Vite) | **Phase 1 MVP komplett**: Saisonliste, Saison-Erstellung, Ergebniserfassung, Tabelle/Einzelwertung, Mannschaftsverwaltung |
+| Rework — Backend (Fastify + Prisma) | Saison anlegen (inkl. automatischem Spielplan), Ergebniserfassung, Tabelle, Einzelwertung, Mannschaft bearbeiten, PDF-Export, Migrationsskript für `database.db` — alles verifiziert |
+| Rework — Frontend (React + Vite) | **Phase 1 + 2 komplett**: Saisonliste, Saison-Erstellung, Ergebniserfassung, Tabelle/Einzelwertung, Mannschaftsverwaltung, PDF-Export |
 | Rework — Desktop-Hülle (Tauri) | noch offen (Rust-Toolchain nötig) |
 | Zentrales Hosting | geplant, noch nicht umgesetzt |
 

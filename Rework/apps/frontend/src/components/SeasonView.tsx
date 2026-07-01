@@ -4,6 +4,7 @@ import type { SeasonDetail } from "../types";
 import { OverviewTab } from "./OverviewTab";
 import { MatchesTab } from "./MatchesTab";
 import { ShootersTab } from "./ShootersTab";
+import { PdfExportButton } from "./PdfExportButton";
 import { theme } from "../theme";
 
 const TABS = ["Übersicht", "Wettkämpfe", "Schützen/innen"] as const;
@@ -29,9 +30,12 @@ export function SeasonView({ seasonId }: { seasonId: number }) {
 
   return (
     <div>
-      <h1 style={{ fontSize: 20, fontWeight: 600, marginBottom: 16 }}>
-        Saison {season.year} · {season.label}
-      </h1>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+        <h1 style={{ fontSize: 20, fontWeight: 600, margin: 0 }}>
+          Saison {season.year} · {season.label}
+        </h1>
+        <PdfExportButton seasonId={season.id} seasonLabel={`${season.label} ${season.year}`} />
+      </div>
       <div style={{ display: "flex", gap: 4, borderBottom: `1px solid ${theme.border}`, marginBottom: 20 }}>
         {TABS.map((t) => (
           <button

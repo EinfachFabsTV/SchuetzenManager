@@ -51,6 +51,18 @@ Die Domänenlogik (Fastify-Routen, Prisma-Schema) ist in beiden Modi identisch �
   - `GET /seasons/:id/personal-scores` (Einzelwertung je Schütze, siehe `domain/personalScores.ts`)
   - `PUT /matches/:id` (Ergebnis eines Matches speichern, ersetzt alle Shoot-Zeilen, siehe `routes/matches.ts`)
   - `PUT /teams/:id` (Mannschaft bearbeiten/umbenennen, siehe `routes/teams.ts`). Da Matches/Shoots die Mannschaft über die Surrogate-ID referenzieren statt über den Namen, ist eine Umbenennung eine reine Attribut-Änderung — anders als in `Database.java#updateTeam()` ist kein Cascade-Update über mehrere Tabellen nötig.
+  - `GET /seasons/:id/pdf?sections=dates,table,scores` (PDF-Export, siehe `domain/pdf.ts`)
+
+### PDF-Export (`domain/pdf.ts`)
+
+Funktionaler Nachbau von `pdf/PDFFactory.java` mit [pdf-lib](https://github.com/Hopding/pdf-lib) statt PDFBox 1.8. Gleiche drei Berichte wie im Original (Termine inkl. Mannschaftsübersicht, Gesamtergebnis, Einzelergebnisse je Altersklasse), auswählbar per `sections`-Query-Parameter wie im Original-Dialog (`MainWindow.createPdf()`). Spaltenbreiten werden wie in `calculateXBorders*()` aus der tatsächlichen Textbreite berechnet, damit lange Mannschafts-/Schützennamen nicht abgeschnitten werden.
+
+**Bewusste Vereinfachungen gegenüber dem Original:**
+- Keine Detailseiten pro Wettkampfwoche (das eigentliche Einzelmatch-Ergebnis ist im [Rework/](Rework/)-Frontend über den Wettkämpfe-Tab einsehbar, nicht zusätzlich im PDF).
+- Die Einzelergebnisse-Tabelle zeigt nur Gesamt/Schnitt pro Saison, nicht die pro-Woche-Matrix des Originals.
+- Der Termine-Abschnitt listet Spiele als einfache Liste pro Woche statt des mehrspaltigen Rasters im Original.
+
+Verifiziert: Testlauf mit 4 Mannschaften + einem erfassten Ergebnis erzeugte ein gültiges PDF mit der erwarteten Seitenzahl (Termine + Gesamtergebnis + 2× Einzelergebnisse nach Altersklasse).
 
 ### Frontend (`Rework/apps/frontend`)
 
@@ -109,7 +121,7 @@ Siehe Projekt-Historie für die vollständige Diskussion. Kurzfassung der Phasen
 |---|---|---|
 | 0 | Fundament: Prisma-Schema, Grundgerüst Backend/Frontend, Logo, Repo-Setup, Migrationsskript für `database.db` | ✅ abgeschlossen |
 | 1 | MVP lokal: Saison-, Ergebnis-, Mannschaftsverwaltung, Tabellenberechnung (SQLite, offline) | ✅ abgeschlossen — Saison anlegen, Ergebniserfassung, Tabelle, Einzelwertung, Mannschaft bearbeiten (inkl. Umbenennen) end-to-end lauffähig |
-| 2 | PDF-Export nachbauen | offen |
+| 2 | PDF-Export nachbauen | ✅ abgeschlossen — Termine/Gesamtergebnis/Einzelergebnisse als PDF, siehe `domain/pdf.ts` |
 | 3 | Zentral-Hosting-Variante: Docker-Deployment, Postgres, Web-Ansicht, User-Management | offen |
 | 4 | Alten Sync-Mechanismus ablösen, E-Mail-Versand modernisieren | offen |
 | 5 | Rollout: Altdaten-Import bei den Vereinen, Parallelbetrieb, Cutover | offen |
