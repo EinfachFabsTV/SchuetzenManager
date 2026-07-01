@@ -1,7 +1,46 @@
-# schiesssportverwaltung
-Verwalten von Schiessportergebnissen für den Schützenkreis Meppen. 
+<p align="center">
+  <img src="Rework/assets/logo/lockup.svg" alt="SchützenManager" width="420" />
+</p>
 
-Dies ist Code eines alten Projekt, dass ich nicht mehr weiterentwickle.  
-Wenn ihr an dem Projekt weiterarbeiten möchtet, forked es und entwickelt es entsprechend weiter. 
+Verwaltung von Rundenwettkampf-Saisons für Schießsportvereine: Mannschaften, Ergebniserfassung, automatische Tabellen- und Einzelwertungsberechnung, PDF-Export und Web-Sync.
 
-Der hier abgelegte Code funktioniert nur mit Java 8. 
+Ursprünglich ein Java-8/JavaFX-Desktop-Projekt für den Schützenkreis Meppen. Wird aktuell auf einen modernen, plattformunabhängigen Stack migriert — siehe [TECHNICAL.md](TECHNICAL.md) für Architektur, Setup und den Migrationsstand.
+
+## Funktionen
+
+- Saisonverwaltung: neue Rundenwettkampf-Saison anlegen, automatischer Spielplan per Round-Robin
+- Ergebniserfassung pro Match (Heim-/Gastmannschaft, bis zu 4 Schützen + Ersatzschützen)
+- Automatische Tabellen- und Einzelwertungsberechnung
+- Mannschaftsverwaltung inkl. Umbenennung mit automatischer Nachführung
+- PDF-Export (Termine, Gesamtergebnis, Einzelergebnisse)
+- Web-Sync mit zentralem Dienst für Vereine/Zuschauer
+
+## So sieht es aktuell aus (Java/JavaFX)
+
+<p align="center">
+  <img src="docs/screenshots/legacy-ui-mockup.svg" alt="Nachbau der bestehenden JavaFX-Oberfläche" width="720" />
+</p>
+
+*Nachbau anhand der FXML-Layouts, kein Live-Screenshot — die App läuft nur unter Java 8 und startet in dieser Umgebung nicht.*
+
+## Wohin die Reise geht (Rework, in Arbeit)
+
+<p align="center">
+  <img src="docs/screenshots/new-ui-concept.svg" alt="Konzept-Mockup der geplanten neuen Oberfläche" width="720" />
+</p>
+
+*Design-Konzept für die Neuentwicklung, noch keine fertige Ansicht — Umsetzungsstand siehe [Rework/](Rework/).*
+
+## Status
+
+| Bereich | Stand |
+|---|---|
+| Legacy (Java/JavaFX) | funktionsfähig, unverändert im Repo-Root |
+| Rework — Backend (Fastify + Prisma) | Grundgerüst läuft, Datenmodell aus Legacy-Schema abgeleitet |
+| Rework — Frontend (React + Vite) | Grundgerüst läuft, erste Anbindung ans Backend |
+| Rework — Desktop-Hülle (Tauri) | noch offen (Rust-Toolchain nötig) |
+| Zentrales Hosting | geplant, noch nicht umgesetzt |
+
+## Lizenz / Copyright
+
+Der ursprüngliche Java-Code steht unter der in [LICENSE](LICENSE) genannten Lizenz. Logo und Rework-Markenzeichen: © Fabian L.

@@ -1,0 +1,77 @@
+<!-- Nachbau der bestehenden JavaFX-Oberfläche anhand der FXML-Layouts (src/view/MainWindow.fxml, MatchResult.fxml). Kein echter Screenshot, da die App nur unter Java 8 lauffähig ist. -->
+<svg width="900" height="620" viewBox="0 0 900 620" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial, sans-serif">
+  <rect x="0" y="0" width="900" height="620" fill="#f2f2f2"/>
+  <rect x="20" y="20" width="860" height="580" fill="#ffffff" stroke="#b0b0b0" stroke-width="1"/>
+  <rect x="20" y="20" width="860" height="28" fill="#e8e8e8" stroke="#b0b0b0" stroke-width="1"/>
+  <text x="34" y="39" font-size="12" fill="#333333">Datei</text>
+  <text x="84" y="39" font-size="12" fill="#333333">Saison</text>
+
+  <rect x="20" y="48" width="150" height="552" fill="#fafafa" stroke="#d0d0d0" stroke-width="1"/>
+  <text x="32" y="66" font-size="10" fill="#888888">SAISONS</text>
+  <rect x="28" y="74" width="134" height="24" fill="#cfe3d8"/>
+  <text x="34" y="90" font-size="11" fill="#1F4D3A">2026 L.G. Auflage A</text>
+  <text x="34" y="116" font-size="11" fill="#555555">2025 L.G. Auflage A</text>
+  <text x="34" y="140" font-size="11" fill="#555555">2025 L.G. Auflage B</text>
+
+  <rect x="170" y="48" width="710" height="30" fill="#ffffff" stroke="#d0d0d0" stroke-width="1"/>
+  <rect x="170" y="48" width="120" height="30" fill="#ffffff" stroke="#1F4D3A" stroke-width="2"/>
+  <text x="192" y="68" font-size="12" fill="#1a1a1a">Übersicht</text>
+  <text x="310" y="68" font-size="12" fill="#888888">Wettkämpfe</text>
+  <text x="410" y="68" font-size="12" fill="#888888">Schützen/innen</text>
+
+  <text x="184" y="102" font-size="12" font-weight="bold" fill="#1a1a1a">Tabelle</text>
+  <g font-size="11" fill="#555555">
+    <text x="184" y="122">Mannschaft</text>
+    <text x="330" y="122">Gew.</text>
+    <text x="380" y="122">Verl.</text>
+    <text x="430" y="122">Unent.</text>
+    <text x="490" y="122">Ringe</text>
+    <text x="540" y="122">Punkte</text>
+  </g>
+  <line x1="184" y1="130" x2="850" y2="130" stroke="#e0e0e0"/>
+  <g font-size="11" fill="#1a1a1a">
+    <text x="184" y="150">Meppen 1</text><text x="330" y="150">4</text><text x="380" y="150">1</text><text x="430" y="150">0</text><text x="490" y="150">1842</text><text x="540" y="150">8</text>
+    <text x="184" y="170">Geeste 1</text><text x="330" y="170">3</text><text x="380" y="170">2</text><text x="430" y="170">0</text><text x="490" y="170">1790</text><text x="540" y="170">6</text>
+  </g>
+
+  <text x="184" y="212" font-size="12" font-weight="bold" fill="#1a1a1a">Mannschaften</text>
+  <g font-size="11" fill="#555555">
+    <text x="184" y="232">Name</text>
+    <text x="330" y="232">Trainingstag</text>
+    <text x="450" y="232">Ort</text>
+  </g>
+  <line x1="184" y1="240" x2="850" y2="240" stroke="#e0e0e0"/>
+  <text x="184" y="260" font-size="11" fill="#1a1a1a">Meppen 1</text>
+  <text x="330" y="260" font-size="11" fill="#1a1a1a">Donnerstag</text>
+  <text x="450" y="260" font-size="11" fill="#1a1a1a">Städt. Schießstand</text>
+
+  <rect x="170" y="300" width="710" height="1" fill="#e0e0e0"/>
+  <text x="184" y="330" font-size="12" font-weight="bold" fill="#1a1a1a">Heimmannschaft (Ergebniserfassung)</text>
+  <g font-size="10" fill="#555555">
+    <text x="184" y="352">Vorname</text>
+    <text x="284" y="352">Nachname</text>
+    <text x="384" y="352">Altersklasse</text>
+    <text x="484" y="352">Start</text>
+    <text x="544" y="352">Ende</text>
+    <text x="604" y="352">Ringe</text>
+  </g>
+  <g stroke="#c9c9c9" fill="#ffffff">
+    <rect x="184" y="360" width="90" height="22"/>
+    <rect x="284" y="360" width="90" height="22"/>
+    <rect x="384" y="360" width="90" height="22"/>
+    <rect x="484" y="360" width="50" height="22"/>
+    <rect x="544" y="360" width="50" height="22"/>
+    <rect x="604" y="360" width="60" height="22"/>
+  </g>
+  <text x="190" y="375" font-size="10" fill="#1a1a1a">Christian</text>
+  <text x="290" y="375" font-size="10" fill="#1a1a1a">Kater</text>
+  <text x="390" y="375" font-size="10" fill="#1a1a1a">Schützenklasse</text>
+  <text x="490" y="375" font-size="10" fill="#1a1a1a">1</text>
+  <text x="550" y="375" font-size="10" fill="#1a1a1a">40</text>
+  <text x="610" y="375" font-size="10" fill="#1a1a1a">382</text>
+
+  <rect x="720" y="560" width="70" height="26" fill="#ffffff" stroke="#b0b0b0"/>
+  <text x="733" y="577" font-size="11" fill="#333333">Abbrechen</text>
+  <rect x="798" y="560" width="72" height="26" fill="#e8e8e8" stroke="#b0b0b0"/>
+  <text x="815" y="577" font-size="11" fill="#333333">Speichern</text>
+</svg>

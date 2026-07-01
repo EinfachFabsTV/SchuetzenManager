@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "rework-backend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "Rework/apps/backend", "run", "dev"],
+      "port": 3001
+    },
+    {
+      "name": "rework-frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "Rework/apps/frontend", "run", "dev"],
+      "port": 5173
+    }
+  ]
+}

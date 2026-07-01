@@ -21,8 +21,19 @@ export default function App() {
   }, []);
 
   return (
-    <main style={{ fontFamily: "sans-serif", padding: "2rem" }}>
-      <h1>SchützenManager</h1>
+    <main
+      style={{
+        fontFamily: "sans-serif",
+        padding: "2rem",
+        background: "#fff",
+        color: "#1a1a1a",
+        minHeight: "100vh",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "1.5rem" }}>
+        <img src="/logo.svg" alt="SchützenManager Logo" width={40} height={40} />
+        <h1 style={{ margin: 0 }}>SchützenManager</h1>
+      </div>
       {error && <p style={{ color: "crimson" }}>Backend nicht erreichbar: {error}</p>}
       {!error && seasons.length === 0 && <p>Keine Saisons vorhanden.</p>}
       <ul>

@@ -1,0 +1,52 @@
+<!-- Konzept-Mockup fuer die geplante Rework-UI (React/Tauri). Kein fertiges Feature, zeigt die angestrebte Design-Richtung. -->
+<svg width="900" height="560" viewBox="0 0 900 560" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial, sans-serif">
+  <rect x="0" y="0" width="900" height="560" fill="#ffffff"/>
+  <rect x="0" y="0" width="220" height="560" fill="#f6f6f4"/>
+  <rect x="24" y="24" width="32" height="32" rx="8" fill="#1F4D3A"/>
+  <circle cx="40" cy="40" r="10" fill="none" stroke="#F4F1E8" stroke-width="2"/>
+  <circle cx="40" cy="40" r="4" fill="#C99A3C"/>
+  <text x="66" y="45" font-size="15" font-weight="600" fill="#1F4D3A">SchützenManager</text>
+
+  <rect x="24" y="84" width="172" height="34" rx="8" fill="#eaf1ec"/>
+  <text x="40" y="105" font-size="12" fill="#1F4D3A">Übersicht</text>
+  <text x="40" y="150" font-size="12" fill="#666666">Mannschaften</text>
+  <text x="40" y="188" font-size="12" fill="#666666">Wettkämpfe</text>
+  <text x="40" y="226" font-size="12" fill="#666666">Schützen/innen</text>
+  <text x="40" y="264" font-size="12" fill="#666666">PDF-Export</text>
+  <text x="40" y="302" font-size="12" fill="#666666">Einstellungen</text>
+
+  <text x="248" y="56" font-size="20" font-weight="600" fill="#1a1a1a">Saison 2026 · L.G. Auflage A</text>
+
+  <rect x="248" y="80" width="150" height="70" rx="12" fill="#f6f6f4"/>
+  <text x="264" y="104" font-size="11" fill="#666666">Wettkampfwochen</text>
+  <text x="264" y="132" font-size="20" font-weight="600" fill="#1a1a1a">14</text>
+
+  <rect x="410" y="80" width="150" height="70" rx="12" fill="#f6f6f4"/>
+  <text x="426" y="104" font-size="11" fill="#666666">Mannschaften</text>
+  <text x="426" y="132" font-size="20" font-weight="600" fill="#1a1a1a">6</text>
+
+  <rect x="572" y="80" width="150" height="70" rx="12" fill="#eaf1ec"/>
+  <text x="588" y="104" font-size="11" fill="#1F4D3A">Nächster Termin</text>
+  <text x="588" y="132" font-size="16" font-weight="600" fill="#1F4D3A">12.09.2026</text>
+
+  <text x="248" y="190" font-size="14" font-weight="600" fill="#1a1a1a">Tabelle</text>
+  <rect x="248" y="204" width="474" height="220" rx="12" fill="#ffffff" stroke="#e5e5e2"/>
+  <g font-size="11" fill="#888888">
+    <text x="264" y="228">Mannschaft</text>
+    <text x="470" y="228">Ringe</text>
+    <text x="540" y="228">Punkte</text>
+  </g>
+  <line x1="264" y1="238" x2="706" y2="238" stroke="#eeeeeb"/>
+  <g font-size="12" fill="#1a1a1a">
+    <text x="264" y="262">Meppen 1</text><text x="470" y="262">1842</text><text x="540" y="262">8</text>
+    <text x="264" y="290">Geeste 1</text><text x="470" y="290">1790</text><text x="540" y="290">6</text>
+    <text x="264" y="318">Dalum 6</text><text x="470" y="318">1755</text><text x="540" y="318">4</text>
+  </g>
+
+  <rect x="740" y="204" width="132" height="220" rx="12" fill="#ffffff" stroke="#e5e5e2"/>
+  <text x="756" y="228" font-size="13" font-weight="600" fill="#1a1a1a">Aktion</text>
+  <rect x="756" y="242" width="100" height="30" rx="8" fill="#1F4D3A"/>
+  <text x="772" y="262" font-size="11" fill="#ffffff">Ergebnis</text>
+  <rect x="756" y="282" width="100" height="30" rx="8" fill="#f6f6f4"/>
+  <text x="772" y="302" font-size="11" fill="#1a1a1a">PDF export</text>
+</svg>
