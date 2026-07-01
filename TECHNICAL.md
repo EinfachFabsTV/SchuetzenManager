@@ -81,14 +81,13 @@ cd apps/frontend
 npm run dev             # http://localhost:5173
 ```
 
-## Datenmigration (geplant, noch nicht implementiert)
+## Datenmigration
 
-Anforderung: bestehende `database.db` (lokal, SQLite) und die Remote-MySQL-Daten müssen vollständig übernehmbar sein. Geplanter Ablauf:
+`scripts/migrate-legacy.ts` (`npm run migrate:legacy --workspace apps/backend -- /pfad/zur/database.db`) liest die alte lokale `database.db` über das eingebaute `node:sqlite`-Modul (keine native Kompilierung nötig) und importiert `season`/`seasonconfig`/`team`/`match`/`dates`/`shoot`/`additionalshoot` in die neuen Prisma-Modelle. Die zusammengesetzten Natural Keys der Legacy-Tabellen (`hometeam, guestteam, season, ...`) werden dabei auf die neuen Surrogate-Keys gemappt; inkonsistente/verwaiste Zeilen (z. B. durch frühere `PRAGMA foreign_keys = OFF`-Fenster bei Team-Umbenennungen) werden übersprungen und geloggt statt den ganzen Lauf abzubrechen.
 
-1. Einmaliges Node-Skript, das die alte `database.db` direkt via `better-sqlite3` oder Prisma (zweite Schema-Datei mit den alten Tabellennamen) ausliest.
-2. Mapping der zusammengesetzten Natural Keys (`hometeam, guestteam, season, firstname, lastname`) auf die neuen Surrogate-Keys.
-3. Import in die neue Prisma-Datenbank via `prisma.$transaction`.
-4. Gleiches Prinzip für die Remote-MySQL-Tabellen (`users`, `responsible`, `matches`, `shoots`, `additionalshoots`, `admins`), sobald das zentrale Hosting steht.
+Verifiziert gegen eine synthetische Fixture-DB mit dem exakten Alt-Schema — alle Zeilen inkl. Heim-/Gast-Zuordnung und Zusatzschützen-Flag kamen korrekt an.
+
+Noch offen: das gleiche Prinzip für die Remote-MySQL-Tabellen (`users`, `responsible`, `matches`, `shoots`, `additionalshoots`, `admins`), sobald das zentrale Hosting steht.
 
 ## Roadmap
 
@@ -96,7 +95,7 @@ Siehe Projekt-Historie für die vollständige Diskussion. Kurzfassung der Phasen
 
 | Phase | Inhalt | Status |
 |---|---|---|
-| 0 | Fundament: Prisma-Schema, Grundgerüst Backend/Frontend, Logo, Repo-Setup | ✅ Backend/Frontend-Grundgerüst steht, Migrationsskript offen |
+| 0 | Fundament: Prisma-Schema, Grundgerüst Backend/Frontend, Logo, Repo-Setup, Migrationsskript für `database.db` | ✅ abgeschlossen |
 | 1 | MVP lokal: Saison-, Ergebnis-, Mannschaftsverwaltung, Tabellenberechnung (SQLite, offline) | offen |
 | 2 | PDF-Export nachbauen | offen |
 | 3 | Zentral-Hosting-Variante: Docker-Deployment, Postgres, Web-Ansicht, User-Management | offen |

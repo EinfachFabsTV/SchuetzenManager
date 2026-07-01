@@ -36,7 +36,7 @@ Ursprünglich ein Java-8/JavaFX-Desktop-Projekt für den Schützenkreis Meppen. 
 | Bereich | Stand |
 |---|---|
 | Legacy (Java/JavaFX) | funktionsfähig, unverändert im Repo-Root |
-| Rework — Backend (Fastify + Prisma) | Grundgerüst läuft, Datenmodell aus Legacy-Schema abgeleitet |
+| Rework — Backend (Fastify + Prisma) | Grundgerüst läuft, Datenmodell aus Legacy-Schema abgeleitet, Migrationsskript für `database.db` verifiziert |
 | Rework — Frontend (React + Vite) | Grundgerüst läuft, erste Anbindung ans Backend |
 | Rework — Desktop-Hülle (Tauri) | noch offen (Rust-Toolchain nötig) |
 | Zentrales Hosting | geplant, noch nicht umgesetzt |
