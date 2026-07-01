@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import bcrypt from "bcryptjs";
 import { prisma } from "../db.js";
-import { authEnabled } from "../auth.js";
+import { authEnabled, getAuthenticatedUser, signToken } from "../auth.js";
 
 type Credentials = { email: string; password: string };
 type RegisterBody = Credentials & { realName: string };
@@ -11,8 +11,8 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
 
   // Bootstrap: only works while no user exists yet, so there's no
   // chicken-and-egg problem creating the first admin account on a fresh
-  // central deployment. Once a user exists, use an authenticated user
-  // management endpoint instead (not yet built - see TECHNICAL.md).
+  // central deployment. Additional users are created via the
+  // authenticated POST /users endpoint (routes/users.ts).
   app.post<{ Body: RegisterBody }>("/auth/register", async (request, reply) => {
     const existing = await prisma.user.count();
     if (existing > 0) {
@@ -26,7 +26,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     }
     const hash = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({ data: { email, realName, password: hash, salt: "" } });
-    const token = app.jwt.sign({ sub: user.id, email: user.email });
+    const token = signToken({ sub: user.id, email: user.email });
     reply.code(201);
     return { token, user: { id: user.id, email: user.email, realName: user.realName } };
   });
@@ -38,12 +38,16 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       reply.code(401);
       return { error: "E-Mail oder Passwort ist falsch." };
     }
-    const token = app.jwt.sign({ sub: user.id, email: user.email });
+    const token = signToken({ sub: user.id, email: user.email });
     return { token, user: { id: user.id, email: user.email, realName: user.realName } };
   });
 
-  app.get("/auth/me", { preHandler: [(req, reply) => req.jwtVerify().catch(() => reply.code(401).send({ error: "Nicht angemeldet." }))] }, async (request) => {
-    const payload = request.user as { sub: number; email: string };
+  app.get("/auth/me", async (request, reply) => {
+    const payload = getAuthenticatedUser(request);
+    if (!payload) {
+      reply.code(401);
+      return { error: "Nicht angemeldet." };
+    }
     const user = await prisma.user.findUnique({ where: { id: payload.sub } });
     return user ? { id: user.id, email: user.email, realName: user.realName } : null;
   });

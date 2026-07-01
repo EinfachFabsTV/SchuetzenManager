@@ -12,6 +12,7 @@ dist/
 build/
 .env
 .env.*
+!.env.example
 Rework/apps/backend/prisma/dev.db
 Rework/apps/backend/prisma/dev.db-journal
 *.tsbuildinfo

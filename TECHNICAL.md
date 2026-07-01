@@ -86,13 +86,24 @@ Alle API-Routen liegen jetzt einheitlich unter `/api/*` (`app.register(seasonsRo
 Auth ist **opt-in** über die Umgebungsvariable `AUTH_ENABLED=true` — im lokalen/Desktop-Modus (Standard, keine Auth im Legacy-Code vorgesehen) bleibt das Verhalten dadurch unverändert, ohne dass Code-Pfade verzweigt werden müssen. Für zentrales Hosting aktiviert.
 
 - `GET /api/auth/status` → `{ enabled: boolean }`, vom Frontend beim Start abgefragt (`LoginGate.tsx`).
-- `POST /api/auth/register` — legt den **ersten** Account an (nur solange `User`-Tabelle leer ist, danach `403`) — löst das Henne-Ei-Problem beim ersten Deployment ohne separates Setup-Skript. Eine Verwaltung weiterer Nutzer/Rollen ist noch nicht gebaut.
-- `POST /api/auth/login` — prüft Passwort via `bcryptjs` gegen den gespeicherten Hash, gibt ein JWT zurück (`@fastify/jwt`, Secret über `JWT_SECRET`).
+- `POST /api/auth/register` — legt den **ersten** Account an (nur solange `User`-Tabelle leer ist, danach `403`) — löst das Henne-Ei-Problem beim ersten Deployment ohne separates Setup-Skript. Weitere Nutzer über `POST /users` (siehe unten).
+- `POST /api/auth/login` — prüft Passwort via `bcryptjs` gegen den gespeicherten Hash, gibt ein JWT zurück (signiert/verifiziert direkt über `jsonwebtoken`, Secret über `JWT_SECRET`).
 - `GET /api/auth/me` — validiert das JWT, liefert die aktuellen Nutzerdaten (für Session-Wiederherstellung nach Reload).
-- `requireAuth`-Hook (`src/auth.ts`) ist als `preHandler` auf die schreibenden Routen gesetzt (`POST /seasons`, `PUT /matches/:id`, `PUT /teams/:id`) — alle `GET`-Routen bleiben immer öffentlich, das erfüllt die "Web-Ansicht für Mannschaften/Zuschauer"-Anforderung ohne eigenen Read-Only-Modus.
+- `requireAuth`-Hook (`src/auth.ts`) ist als `preHandler` auf die schreibenden Routen gesetzt (`POST /seasons`, `PUT /matches/:id`, `PUT /teams/:id`, `POST /users`) — alle `GET`-Routen bleiben immer öffentlich, das erfüllt die "Web-Ansicht für Mannschaften/Zuschauer"-Anforderung ohne eigenen Read-Only-Modus.
+- **Warum `jsonwebtoken` statt `@fastify/jwt`:** Die mit Fastify 4 kompatible Version `@fastify/jwt@8` zieht `fast-jwt@4.x` nach sich, das mehrere kritische CVEs hat (u.a. JWT-Auth-Bypass über leeres HMAC-Secret) — gepatcht erst ab einer `fast-jwt`-Version, die `@fastify/jwt@10` und damit Fastify 5 voraussetzt. Statt an Dependency-Overrides zu basteln, signiert/verifiziert `src/auth.ts` JWTs direkt mit dem gut gepflegten `jsonwebtoken`-Paket (liest den `Authorization: Bearer`-Header manuell). Der verbleibende Fastify-4→5-Umstieg (u.a. wegen einer unabhängigen `fast-uri`-Schwachstelle in Fastify 4 selbst) ist als separate Folgeaufgabe vorgemerkt.
 - **Vereinfachung:** Das `salt`-Feld aus dem Legacy-Schema bleibt in der Tabelle (Migrationskompatibilität), wird von der neuen `bcryptjs`-Hashing-Logik aber nicht genutzt (bcrypt bettet den Salt in den Hash ein). Legacy-Passwort-Hashes sind nicht kompatibel — migrierte Nutzer bräuchten ein neues Passwort.
 
 Verifiziert end-to-end (SQLite, lokal): mit `AUTH_ENABLED=false` (Standard) funktioniert alles wie vorher ohne Token. Mit `AUTH_ENABLED=true`: `POST /seasons` ohne Token → `401`; Erst-Registrierung → Token; zweite Registrierung → `403`; Login mit falschem Passwort → `401`; `POST /seasons` mit gültigem Token → `201`; `GET /seasons` bleibt ohne Token erreichbar. Im Frontend zusätzlich per Browser durchgespielt: Login-Screen erscheint, Erst-Registrierung, Saison mit Token anlegen, Session übersteht Reload, Abmelden führt zurück zum Login-Screen.
+
+### Nutzerverwaltung + Mail (`routes/users.ts`, `src/mail.ts`)
+
+Funktionaler Nachbau des einzigen Aufrufs von `tools/SendMail.java` im Legacy-Code (`UserAdministration.java`: neuer Webservice-Account → Mail mit Zugangsdaten):
+
+- `GET /users` (authentifiziert) — listet alle Nutzer (ohne Passwort-Hash).
+- `POST /users` (authentifiziert) — legt einen neuen Nutzer mit generiertem Einmal-Passwort an und verschickt es per Mail (`src/mail.ts`, nodemailer statt JavaMail; Config-Keys `mail.*` aus `config.properties` → `SMTP_*`/`MAIL_FROM`-Env-Variablen). Ist `SMTP_HOST` nicht gesetzt, wird nichts verschickt, sondern die fertige Nachricht geloggt (`jsonTransport`) — damit der komplette Code-Pfad auch ohne echten Mailserver testbar ist.
+- **Noch offen:** ein Endpunkt, mit dem Nutzer ihr Einmal-Passwort selbst ändern können (aktuell nur admin-seitig über direktes Neuanlegen möglich).
+
+Verifiziert end-to-end mit `AUTH_ENABLED=true` (kein echter SMTP-Server im Entwicklungs-Environment verfügbar, daher über den JSON-Transport-Fallback geprüft): Nutzer ohne Token anlegen → `401`; mit Token → `201` plus geloggte Mail mit korrektem Empfänger/Betreff/generiertem Passwort; Login mit dem aus dem Mail-Log entnommenen Passwort → erfolgreich.
 
 ### Frontend (`Rework/apps/frontend`)
 
@@ -155,5 +166,5 @@ Siehe Projekt-Historie für die vollständige Diskussion. Kurzfassung der Phasen
 | 1 | MVP lokal: Saison-, Ergebnis-, Mannschaftsverwaltung, Tabellenberechnung (SQLite, offline) | ✅ abgeschlossen — Saison anlegen, Ergebniserfassung, Tabelle, Einzelwertung, Mannschaft bearbeiten (inkl. Umbenennen) end-to-end lauffähig |
 | 2 | PDF-Export nachbauen | ✅ abgeschlossen — Termine/Gesamtergebnis/Einzelergebnisse als PDF, siehe `domain/pdf.ts` |
 | 3 | Zentral-Hosting-Variante: Docker-Deployment, Postgres, Web-Ansicht, User-Management | 🟡 Docker-Image, Postgres-Schema und Login/Auth stehen (Details unten); echter Docker/Postgres-Lauf nicht verifiziert |
-| 4 | Alten Sync-Mechanismus ablösen, E-Mail-Versand modernisieren | offen |
+| 4 | Alten Sync-Mechanismus ablösen, E-Mail-Versand modernisieren | ✅ Sync durch zentrale DB (Phase 3) ersetzt; E-Mail-Versand + Nutzerverwaltung nachgebaut (siehe oben) |
 | 5 | Rollout: Altdaten-Import bei den Vereinen, Parallelbetrieb, Cutover | offen |
