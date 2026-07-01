@@ -54,7 +54,12 @@ Die Domänenlogik (Fastify-Routen, Prisma-Schema) ist in beiden Modi identisch �
 ### Frontend (`Rework/apps/frontend`)
 
 - Vite + React + TypeScript, ruft das Backend über `/api/*` auf (Vite-Dev-Proxy auf Port 3001, siehe `vite.config.ts`).
-- Aktuell nur ein Platzhalter, der `/api/seasons` lädt und anzeigt — reine Verifikation, dass Frontend/Backend/DB als Kette funktionieren.
+- Layout orientiert sich bewusst an der bestehenden JavaFX-App: Sidebar mit Saisonliste links (`components/Sidebar.tsx`), Hauptbereich mit den drei Tabs Übersicht/Wettkämpfe/Schützen-innen (`components/SeasonView.tsx`), analog zu `MainWindow.fxml`/`ShootingAdministration.fxml`.
+- `components/CreateSeasonForm.tsx`: Jahr/Bezeichnung + dynamische Mannschaftsliste, ruft `POST /seasons` auf (löst die Spielplan-Generierung im Backend aus).
+- `components/OverviewTab.tsx`: Tabelle + Mannschaftsliste (`GET /seasons/:id/table`).
+- `components/MatchesTab.tsx` + `MatchForm.tsx`: Matches nach Woche gruppiert, Klick öffnet die Ergebniserfassung (4 Schützen je Seite + Zusatzschützen), speichert über `PUT /matches/:id`.
+- `components/ShootersTab.tsx`: Einzelwertung nach Altersklasse gefiltert (`GET /seasons/:id/personal-scores`).
+- End-to-end manuell durchgetestet: Saison mit 2 Mannschaften angelegt (Spielplan → 2 Wochen), Ergebnis für ein Match erfasst, Tabelle/Einzelwertung aktualisierten sich korrekt ohne Reload.
 
 ### Desktop-Hülle (Tauri) — noch offen
 
@@ -102,7 +107,7 @@ Siehe Projekt-Historie für die vollständige Diskussion. Kurzfassung der Phasen
 | Phase | Inhalt | Status |
 |---|---|---|
 | 0 | Fundament: Prisma-Schema, Grundgerüst Backend/Frontend, Logo, Repo-Setup, Migrationsskript für `database.db` | ✅ abgeschlossen |
-| 1 | MVP lokal: Saison-, Ergebnis-, Mannschaftsverwaltung, Tabellenberechnung (SQLite, offline) | 🟡 Backend-Logik steht (Spielplan-Generierung, Ergebniserfassung, Tabelle, Einzelwertung), Frontend-UI dafür noch offen |
+| 1 | MVP lokal: Saison-, Ergebnis-, Mannschaftsverwaltung, Tabellenberechnung (SQLite, offline) | 🟡 Saison anlegen, Ergebniserfassung, Tabelle, Einzelwertung end-to-end lauffähig (Backend + Frontend); Mannschaftsverwaltung (Umbenennen etc.) noch offen |
 | 2 | PDF-Export nachbauen | offen |
 | 3 | Zentral-Hosting-Variante: Docker-Deployment, Postgres, Web-Ansicht, User-Management | offen |
 | 4 | Alten Sync-Mechanismus ablösen, E-Mail-Versand modernisieren | offen |

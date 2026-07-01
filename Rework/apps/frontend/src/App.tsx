@@ -1,48 +1,45 @@
 import { useEffect, useState } from "react";
+import { api } from "./api/client";
+import type { SeasonSummary } from "./types";
+import { Sidebar } from "./components/Sidebar";
+import { CreateSeasonForm } from "./components/CreateSeasonForm";
+import { SeasonView } from "./components/SeasonView";
 
-type Season = {
-  id: number;
-  year: number;
-  label: string;
-};
+type View = { kind: "empty" } | { kind: "create" } | { kind: "season"; id: number };
 
 export default function App() {
-  const [seasons, setSeasons] = useState<Season[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [seasons, setSeasons] = useState<SeasonSummary[]>([]);
+  const [view, setView] = useState<View>({ kind: "empty" });
+
+  function reloadSeasons() {
+    api.getSeasons().then(setSeasons).catch(console.error);
+  }
 
   useEffect(() => {
-    fetch("/api/seasons")
-      .then((res) => {
-        if (!res.ok) throw new Error(`API antwortete mit ${res.status}`);
-        return res.json();
-      })
-      .then(setSeasons)
-      .catch((err) => setError(err.message));
+    reloadSeasons();
   }, []);
 
   return (
-    <main
-      style={{
-        fontFamily: "sans-serif",
-        padding: "2rem",
-        background: "#fff",
-        color: "#1a1a1a",
-        minHeight: "100vh",
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "1.5rem" }}>
-        <img src="/logo.svg" alt="SchützenManager Logo" width={40} height={40} />
-        <h1 style={{ margin: 0 }}>SchützenManager</h1>
-      </div>
-      {error && <p style={{ color: "crimson" }}>Backend nicht erreichbar: {error}</p>}
-      {!error && seasons.length === 0 && <p>Keine Saisons vorhanden.</p>}
-      <ul>
-        {seasons.map((season) => (
-          <li key={season.id}>
-            {season.label} ({season.year})
-          </li>
-        ))}
-      </ul>
-    </main>
+    <div style={{ display: "flex", minHeight: "100vh", background: "#fff", color: "#1a1a1a", fontFamily: "system-ui, sans-serif" }}>
+      <Sidebar
+        seasons={seasons}
+        selectedId={view.kind === "season" ? view.id : null}
+        onSelect={(id) => setView({ kind: "season", id })}
+        onCreateClick={() => setView({ kind: "create" })}
+      />
+      <main style={{ flex: 1, padding: "24px 32px" }}>
+        {view.kind === "empty" && <p style={{ color: "#666" }}>Wähle eine Saison aus oder lege eine neue an.</p>}
+        {view.kind === "create" && (
+          <CreateSeasonForm
+            onCreated={(id) => {
+              reloadSeasons();
+              setView({ kind: "season", id });
+            }}
+            onCancel={() => setView({ kind: "empty" })}
+          />
+        )}
+        {view.kind === "season" && <SeasonView seasonId={view.id} />}
+      </main>
+    </div>
   );
 }

@@ -26,10 +26,10 @@ Ursprünglich entwickelt von **Christian Kater** als Java-8/JavaFX-Desktop-Proje
 ## Wohin die Reise geht (Rework, in Arbeit)
 
 <p align="center">
-  <img src="docs/screenshots/new-ui-concept.svg" alt="Konzept-Mockup der geplanten neuen Oberfläche" width="720" />
+  <img src="docs/screenshots/new-ui-concept.svg" alt="Design-Richtung der neuen Oberfläche" width="720" />
 </p>
 
-*Design-Konzept für die Neuentwicklung, noch keine fertige Ansicht — Umsetzungsstand siehe [Rework/](Rework/).*
+*Design-Mockup der Ziel-Optik — die Kernfunktionen (Saison mit automatischem Spielplan anlegen, Ergebnis erfassen, Tabelle/Einzelwertung live berechnen) sind im [Rework/](Rework/)-Frontend bereits lauffähig und manuell durchgetestet; UI-Feinschliff/Team-Verwaltung folgt noch.*
 
 ## Status
 
@@ -37,7 +37,7 @@ Ursprünglich entwickelt von **Christian Kater** als Java-8/JavaFX-Desktop-Proje
 |---|---|
 | Legacy (Java/JavaFX) | funktionsfähig, unverändert in [Legacy/](Legacy/) |
 | Rework — Backend (Fastify + Prisma) | Saison anlegen (inkl. automatischem Spielplan), Ergebniserfassung, Tabelle, Einzelwertung, Migrationsskript für `database.db` — alles verifiziert |
-| Rework — Frontend (React + Vite) | Grundgerüst läuft, UI für die neuen Backend-Funktionen noch offen |
+| Rework — Frontend (React + Vite) | Saisonliste, Saison-Erstellungsformular, Ergebniserfassung, Tabellen-/Einzelwertungsansicht funktionieren end-to-end; Team-Verwaltung (Umbenennen etc.) noch offen |
 | Rework — Desktop-Hülle (Tauri) | noch offen (Rust-Toolchain nötig) |
 | Zentrales Hosting | geplant, noch nicht umgesetzt |
 
