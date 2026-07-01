@@ -9,9 +9,12 @@
     "start": "node dist/server.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
+    "prisma:generate:postgresql": "prisma generate --schema=prisma-postgresql/schema.prisma",
+    "prisma:migrate:postgresql:deploy": "prisma migrate deploy --schema=prisma-postgresql/schema.prisma",
     "migrate:legacy": "tsx scripts/migrate-legacy.ts"
   },
   "dependencies": {
+    "@fastify/static": "^7.0.4",
     "@prisma/client": "^5.20.0",
     "fastify": "^4.28.1",
     "pdf-lib": "^1.17.1"

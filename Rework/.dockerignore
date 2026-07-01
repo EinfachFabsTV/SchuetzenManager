@@ -1,0 +1,6 @@
+**/node_modules
+**/dist
+apps/backend/prisma/dev.db
+apps/backend/prisma/dev.db-journal
+**/.env
+**/tsconfig.tsbuildinfo

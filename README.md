@@ -39,7 +39,7 @@ Ursprünglich entwickelt von **Christian Kater** als Java-8/JavaFX-Desktop-Proje
 | Rework — Backend (Fastify + Prisma) | Saison anlegen (inkl. automatischem Spielplan), Ergebniserfassung, Tabelle, Einzelwertung, Mannschaft bearbeiten, PDF-Export, Migrationsskript für `database.db` — alles verifiziert |
 | Rework — Frontend (React + Vite) | **Phase 1 + 2 komplett**: Saisonliste, Saison-Erstellung, Ergebniserfassung, Tabelle/Einzelwertung, Mannschaftsverwaltung, PDF-Export |
 | Rework — Desktop-Hülle (Tauri) | noch offen (Rust-Toolchain nötig) |
-| Zentrales Hosting | geplant, noch nicht umgesetzt |
+| Zentrales Hosting (Docker + Postgres) | Docker-Image + Postgres-Schema/-Migration stehen, Serving-Logik lokal verifiziert; echter `docker`-Lauf und Migration gegen eine laufende Postgres-Instanz noch nicht getestet (Details in [TECHNICAL.md](TECHNICAL.md)). User-Management/Login noch offen |
 
 ## Lizenz / Copyright
 

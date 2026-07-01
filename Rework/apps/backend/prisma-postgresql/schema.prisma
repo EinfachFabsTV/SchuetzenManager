@@ -1,0 +1,106 @@
+// Postgres variant of prisma/schema.prisma, used for central hosting
+// (Docker deployment) instead of the SQLite file used for local/desktop
+// mode. Keep this in sync with prisma/schema.prisma by hand - Prisma does
+// not support parameterizing the datasource `provider` itself (only the
+// `url`), so a single shared schema file isn't possible. The models are
+// intentionally free of SQLite-only constructs (no native enums are used
+// anywhere, since SQLite doesn't support them either) so this variant only
+// ever needs to change the `datasource` block.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Season {
+  id            Int         @id @default(autoincrement())
+  year          Int
+  label         String
+  infoBox       String?
+  contactMail   String?
+  contactPerson String?
+  createdAt     DateTime    @default(now())
+  teams         Team[]
+  matches       Match[]
+  matchDates    MatchDate[]
+}
+
+model Team {
+  id           Int     @id @default(autoincrement())
+  name         String
+  trainingDay  String?
+  trainingTime String?
+  location     String?
+  contact      String?
+  phone        String?
+  season       Season  @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  seasonId     Int
+  homeMatches  Match[] @relation("HomeTeam")
+  guestMatches Match[] @relation("GuestTeam")
+
+  @@unique([seasonId, name])
+}
+
+model Match {
+  id          Int     @id @default(autoincrement())
+  week        Int
+  season      Season  @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  seasonId    Int
+  homeTeam    Team    @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  homeTeamId  Int
+  guestTeam   Team    @relation("GuestTeam", fields: [guestTeamId], references: [id])
+  guestTeamId Int
+  shoots      Shoot[]
+
+  @@unique([seasonId, homeTeamId, guestTeamId])
+}
+
+model MatchDate {
+  id       Int     @id @default(autoincrement())
+  week     Int
+  date     String?
+  season   Season  @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  seasonId Int
+
+  @@unique([seasonId, week])
+}
+
+model Shoot {
+  id         Int      @id @default(autoincrement())
+  firstName  String
+  lastName   String
+  // "Schützenklasse" | "Senioren" (matches the legacy Agegroup.toString()
+  // values stored in the old DB). Postgres does support native enums, but
+  // this stays a String to keep the two schema variants identical apart
+  // from the datasource block.
+  ageGroup   String
+  // "HOME" | "GUEST"
+  teamSide   String
+  additional Boolean  @default(false)
+  startId    Int?
+  endId      Int?
+  result     Float
+  match      Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  matchId    Int
+}
+
+model User {
+  id             Int           @id @default(autoincrement())
+  email          String        @unique
+  realName       String
+  password       String
+  salt           String
+  responsibleFor Responsible[]
+}
+
+model Responsible {
+  id       Int    @id @default(autoincrement())
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId   Int
+  team     String
+  season   Int
+}

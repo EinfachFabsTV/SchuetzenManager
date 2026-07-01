@@ -64,6 +64,23 @@ Funktionaler Nachbau von `pdf/PDFFactory.java` mit [pdf-lib](https://github.com/
 
 Verifiziert: Testlauf mit 4 Mannschaften + einem erfassten Ergebnis erzeugte ein gültiges PDF mit der erwarteten Seitenzahl (Termine + Gesamtergebnis + 2× Einzelergebnisse nach Altersklasse).
 
+### Zentral-Hosting (Docker + Postgres)
+
+Alle API-Routen liegen jetzt einheitlich unter `/api/*` (`app.register(seasonsRoutes, { prefix: "/api" })` usw. in `server.ts`) — im lokalen Dev-Modus proxied Vite `/api` unverändert an das Backend durch (`vite.config.ts`), im Docker-Image liefert derselbe Fastify-Prozess zusätzlich das gebaute Frontend als statische Dateien aus (`@fastify/static`, siehe `dist/public` im Image) inkl. SPA-Fallback für Client-seitiges Routing (unbekannte GET-Routen außerhalb `/api` liefern `index.html`, unbekannte `/api`-Routen bleiben ein sauberer 404).
+
+**Zwei Prisma-Schema-Varianten**, da Prisma den Datasource-`provider` nicht per Umgebungsvariable parametrisieren kann (nur die `url`):
+- `prisma/schema.prisma` — SQLite, lokaler/Desktop-Modus (Standard, unverändert)
+- `prisma-postgresql/schema.prisma` — identische Modelle, `provider = "postgresql"`, eigene Migrations-Historie unter `prisma-postgresql/migrations/`. Beide Dateien müssen von Hand synchron gehalten werden; da keines der Modelle SQLite- oder Postgres-spezifische Konstrukte nutzt (auch keine nativen Enums, s.o.), betrifft das in der Praxis nur den `datasource`-Block.
+- Wechsel zwischen den Client-Varianten lokal: `npm run prisma:generate` (SQLite) bzw. `npm run prisma:generate:postgresql` (Postgres) — regeneriert denselben `@prisma/client`-Output, daher immer nur eine Variante gleichzeitig aktiv.
+- Die initiale Postgres-Migration (`prisma-postgresql/migrations/20260702000000_init/migration.sql`) wurde statisch über `prisma migrate diff --from-empty --to-schema-datamodel ... --script` erzeugt (von Prismas Schema-Engine geprüftes, valides DDL) und **nicht** gegen eine echte Postgres-Instanz angewendet — im Entwicklungs-Environment war zwar lokal PostgreSQL 18 installiert, aber keine nutzbaren Zugangsdaten verfügbar.
+
+**Docker** (`Rework/Dockerfile`, `Rework/docker-compose.yml`): Drei-Stufen-Build (Frontend-Build → Backend-Build inkl. `prisma generate` gegen das Postgres-Schema → Runtime-Image, das Backend + gebautes Frontend enthält). Der Container-Start führt `prisma migrate deploy --schema=prisma-postgresql/schema.prisma` aus, bevor der Server startet. `docker-compose.yml` bringt einen `postgres:16`-Service mit.
+
+**Was tatsächlich verifiziert wurde** (im Entwicklungs-Environment war weder `docker` noch eine nutzbare Postgres-Verbindung verfügbar):
+- Jeder einzelne Befehl aus dem Dockerfile lokal ausgeführt: Frontend-Build (`vite build`), Backend-Build (`tsc`), `prisma generate --schema=prisma-postgresql/schema.prisma` (läuft ohne Datenbankverbindung durch).
+- Die kombinierte Serving-Logik in `server.ts` (das eigentliche neue Verhalten) lokal mit dem SQLite-Build durchgespielt: gebautes Frontend nach `dist/public` kopiert, Server gestartet, `/` liefert `index.html`, `/api/seasons` liefert JSON, eine unbekannte Route liefert den SPA-Fallback, eine unbekannte `/api`-Route liefert sauber 404.
+- **Nicht verifiziert:** ein echter `docker build`/`docker compose up`-Lauf und das Anwenden der Postgres-Migration gegen eine laufende Postgres-Instanz — das kann nur außerhalb dieses Environments getestet werden.
+
 ### Frontend (`Rework/apps/frontend`)
 
 - Vite + React + TypeScript, ruft das Backend über `/api/*` auf (Vite-Dev-Proxy auf Port 3001, siehe `vite.config.ts`).
@@ -122,6 +139,6 @@ Siehe Projekt-Historie für die vollständige Diskussion. Kurzfassung der Phasen
 | 0 | Fundament: Prisma-Schema, Grundgerüst Backend/Frontend, Logo, Repo-Setup, Migrationsskript für `database.db` | ✅ abgeschlossen |
 | 1 | MVP lokal: Saison-, Ergebnis-, Mannschaftsverwaltung, Tabellenberechnung (SQLite, offline) | ✅ abgeschlossen — Saison anlegen, Ergebniserfassung, Tabelle, Einzelwertung, Mannschaft bearbeiten (inkl. Umbenennen) end-to-end lauffähig |
 | 2 | PDF-Export nachbauen | ✅ abgeschlossen — Termine/Gesamtergebnis/Einzelergebnisse als PDF, siehe `domain/pdf.ts` |
-| 3 | Zentral-Hosting-Variante: Docker-Deployment, Postgres, Web-Ansicht, User-Management | offen |
+| 3 | Zentral-Hosting-Variante: Docker-Deployment, Postgres, Web-Ansicht, User-Management | 🟡 Docker-Image + Postgres-Schema stehen (Details unten), User-Management/Auth noch offen |
 | 4 | Alten Sync-Mechanismus ablösen, E-Mail-Versand modernisieren | offen |
 | 5 | Rollout: Altdaten-Import bei den Vereinen, Parallelbetrieb, Cutover | offen |
