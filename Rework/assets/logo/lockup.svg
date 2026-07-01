@@ -1,0 +1,17 @@
+<!-- SchützenManager wordmark lockup. Copyright (c) Fabian L. All rights reserved. -->
+<svg width="680" height="240" viewBox="0 0 680 240" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(0,0)">
+    <rect x="0" y="0" width="240" height="240" rx="48" fill="#1F4D3A"/>
+    <circle cx="120" cy="120" r="92" fill="none" stroke="#F4F1E8" stroke-width="14"/>
+    <circle cx="120" cy="120" r="64" fill="none" stroke="#F4F1E8" stroke-width="14"/>
+    <circle cx="120" cy="120" r="36" fill="none" stroke="#C99A3C" stroke-width="14"/>
+    <circle cx="120" cy="120" r="9" fill="#C99A3C"/>
+    <line x1="120" y1="10" x2="120" y2="60" stroke="#C99A3C" stroke-width="6" stroke-linecap="round"/>
+    <line x1="120" y1="180" x2="120" y2="230" stroke="#C99A3C" stroke-width="6" stroke-linecap="round"/>
+    <line x1="10" y1="120" x2="60" y2="120" stroke="#C99A3C" stroke-width="6" stroke-linecap="round"/>
+    <line x1="180" y1="120" x2="230" y2="120" stroke="#C99A3C" stroke-width="6" stroke-linecap="round"/>
+  </g>
+  <text x="280" y="110" font-size="34" font-weight="500" fill="#1F4D3A" font-family="sans-serif">Schützen<tspan fill="#C99A3C">Manager</tspan></text>
+  <text x="280" y="144" font-size="14" fill="#5F5E5A" font-family="sans-serif">Verwaltung von Rundenwettkämpfen</text>
+  <text x="280" y="180" font-size="12" fill="#888780" font-family="sans-serif">&#169; Fabian L.</text>
+</svg>

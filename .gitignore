@@ -12,6 +12,9 @@ dist/
 build/
 .env
 .env.*
+Rework/apps/backend/prisma/dev.db
+Rework/apps/backend/prisma/dev.db-journal
+*.tsbuildinfo
 
 # Rust / Tauri
 Rework/**/target/
