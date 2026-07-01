@@ -72,7 +72,8 @@ model Shoot {
   id         Int      @id @default(autoincrement())
   firstName  String
   lastName   String
-  // "SCHUETZENKLASSE" | "SENIOREN" - SQLite has no native enum support in
+  // "Schützenklasse" | "Senioren" (matches the legacy Agegroup.toString()
+  // values stored in the old DB) - SQLite has no native enum support in
   // Prisma, validated as a union type in the application layer instead.
   ageGroup   String
   // "HOME" | "GUEST"
