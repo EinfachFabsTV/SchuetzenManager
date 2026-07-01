@@ -4,6 +4,7 @@ import { generateSchedule } from "../domain/roundRobin.js";
 import { computeTable } from "../domain/table.js";
 import { computePersonalScores } from "../domain/personalScores.js";
 import { generateSeasonPdf } from "../domain/pdf.js";
+import { requireAuth } from "../auth.js";
 
 type TeamInput = {
   name: string;
@@ -19,7 +20,10 @@ export const seasonsRoutes: FastifyPluginAsync = async (app) => {
     return prisma.season.findMany({ orderBy: [{ year: "desc" }, { label: "asc" }] });
   });
 
-  app.post<{ Body: { year: number; label: string; teams: TeamInput[] } }>("/seasons", async (request, reply) => {
+  app.post<{ Body: { year: number; label: string; teams: TeamInput[] } }>(
+    "/seasons",
+    { preHandler: requireAuth },
+    async (request, reply) => {
     const { year, label, teams } = request.body;
     if (!teams || teams.length < 2) {
       reply.code(400);
@@ -60,9 +64,10 @@ export const seasonsRoutes: FastifyPluginAsync = async (app) => {
       await prisma.matchDate.create({ data: { seasonId: season.id, week, date: null } });
     }
 
-    reply.code(201);
-    return prisma.season.findUnique({ where: { id: season.id }, include: { teams: true } });
-  });
+      reply.code(201);
+      return prisma.season.findUnique({ where: { id: season.id }, include: { teams: true } });
+    },
+  );
 
   app.get<{ Params: { id: string } }>("/seasons/:id", async (request, reply) => {
     const id = Number(request.params.id);

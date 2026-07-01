@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../db.js";
+import { requireAuth } from "../auth.js";
 
 type UpdateTeamBody = {
   name: string;
@@ -16,7 +17,7 @@ type UpdateTeamBody = {
 // reference the team by surrogate id, not by name, so there is no cascade
 // to replay across tables.
 export const teamsRoutes: FastifyPluginAsync = async (app) => {
-  app.put<{ Params: { id: string }; Body: UpdateTeamBody }>("/teams/:id", async (request, reply) => {
+  app.put<{ Params: { id: string }; Body: UpdateTeamBody }>("/teams/:id", { preHandler: requireAuth }, async (request, reply) => {
     const id = Number(request.params.id);
     const { name, trainingDay, trainingTime, location, contact, phone } = request.body;
 

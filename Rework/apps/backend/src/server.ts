@@ -6,6 +6,8 @@ import fastifyStatic from "@fastify/static";
 import { seasonsRoutes } from "./routes/seasons.js";
 import { matchesRoutes } from "./routes/matches.js";
 import { teamsRoutes } from "./routes/teams.js";
+import { authRoutes } from "./routes/auth.js";
+import { registerAuth } from "./auth.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -13,6 +15,8 @@ const app = Fastify({ logger: true });
 
 app.get("/health", async () => ({ status: "ok" }));
 
+await registerAuth(app);
+await app.register(authRoutes, { prefix: "/api" });
 await app.register(seasonsRoutes, { prefix: "/api" });
 await app.register(matchesRoutes, { prefix: "/api" });
 await app.register(teamsRoutes, { prefix: "/api" });

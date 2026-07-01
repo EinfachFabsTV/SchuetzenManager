@@ -81,6 +81,19 @@ Alle API-Routen liegen jetzt einheitlich unter `/api/*` (`app.register(seasonsRo
 - Die kombinierte Serving-Logik in `server.ts` (das eigentliche neue Verhalten) lokal mit dem SQLite-Build durchgespielt: gebautes Frontend nach `dist/public` kopiert, Server gestartet, `/` liefert `index.html`, `/api/seasons` liefert JSON, eine unbekannte Route liefert den SPA-Fallback, eine unbekannte `/api`-Route liefert sauber 404.
 - **Nicht verifiziert:** ein echter `docker build`/`docker compose up`-Lauf und das Anwenden der Postgres-Migration gegen eine laufende Postgres-Instanz — das kann nur außerhalb dieses Environments getestet werden.
 
+### Login / User-Management (`src/auth.ts`, `routes/auth.ts`)
+
+Auth ist **opt-in** über die Umgebungsvariable `AUTH_ENABLED=true` — im lokalen/Desktop-Modus (Standard, keine Auth im Legacy-Code vorgesehen) bleibt das Verhalten dadurch unverändert, ohne dass Code-Pfade verzweigt werden müssen. Für zentrales Hosting aktiviert.
+
+- `GET /api/auth/status` → `{ enabled: boolean }`, vom Frontend beim Start abgefragt (`LoginGate.tsx`).
+- `POST /api/auth/register` — legt den **ersten** Account an (nur solange `User`-Tabelle leer ist, danach `403`) — löst das Henne-Ei-Problem beim ersten Deployment ohne separates Setup-Skript. Eine Verwaltung weiterer Nutzer/Rollen ist noch nicht gebaut.
+- `POST /api/auth/login` — prüft Passwort via `bcryptjs` gegen den gespeicherten Hash, gibt ein JWT zurück (`@fastify/jwt`, Secret über `JWT_SECRET`).
+- `GET /api/auth/me` — validiert das JWT, liefert die aktuellen Nutzerdaten (für Session-Wiederherstellung nach Reload).
+- `requireAuth`-Hook (`src/auth.ts`) ist als `preHandler` auf die schreibenden Routen gesetzt (`POST /seasons`, `PUT /matches/:id`, `PUT /teams/:id`) — alle `GET`-Routen bleiben immer öffentlich, das erfüllt die "Web-Ansicht für Mannschaften/Zuschauer"-Anforderung ohne eigenen Read-Only-Modus.
+- **Vereinfachung:** Das `salt`-Feld aus dem Legacy-Schema bleibt in der Tabelle (Migrationskompatibilität), wird von der neuen `bcryptjs`-Hashing-Logik aber nicht genutzt (bcrypt bettet den Salt in den Hash ein). Legacy-Passwort-Hashes sind nicht kompatibel — migrierte Nutzer bräuchten ein neues Passwort.
+
+Verifiziert end-to-end (SQLite, lokal): mit `AUTH_ENABLED=false` (Standard) funktioniert alles wie vorher ohne Token. Mit `AUTH_ENABLED=true`: `POST /seasons` ohne Token → `401`; Erst-Registrierung → Token; zweite Registrierung → `403`; Login mit falschem Passwort → `401`; `POST /seasons` mit gültigem Token → `201`; `GET /seasons` bleibt ohne Token erreichbar. Im Frontend zusätzlich per Browser durchgespielt: Login-Screen erscheint, Erst-Registrierung, Saison mit Token anlegen, Session übersteht Reload, Abmelden führt zurück zum Login-Screen.
+
 ### Frontend (`Rework/apps/frontend`)
 
 - Vite + React + TypeScript, ruft das Backend über `/api/*` auf (Vite-Dev-Proxy auf Port 3001, siehe `vite.config.ts`).
@@ -89,6 +102,8 @@ Alle API-Routen liegen jetzt einheitlich unter `/api/*` (`app.register(seasonsRo
 - `components/OverviewTab.tsx`: Tabelle + Mannschaftsliste (`GET /seasons/:id/table`).
 - `components/MatchesTab.tsx` + `MatchForm.tsx`: Matches nach Woche gruppiert, Klick öffnet die Ergebniserfassung (4 Schützen je Seite + Zusatzschützen), speichert über `PUT /matches/:id`.
 - `components/ShootersTab.tsx`: Einzelwertung nach Altersklasse gefiltert (`GET /seasons/:id/personal-scores`).
+- `components/PdfExportButton.tsx`: Abschnitts-Auswahl + Download, ruft `GET /seasons/:id/pdf`.
+- `components/LoginGate.tsx` + `LoginForm.tsx`: fragt `GET /api/auth/status` ab; ist Auth deaktiviert, wird die App direkt gerendert (kein UI-Unterschied zum bisherigen Verhalten); ist sie aktiviert, blockiert ein Login-/Erst-Registrierungs-Screen, bis ein gültiges JWT vorliegt (in `localStorage` persistiert, an `api/client.ts`s `request()` als `Authorization`-Header angehängt).
 - End-to-end manuell durchgetestet: Saison mit 2 Mannschaften angelegt (Spielplan → 2 Wochen), Ergebnis für ein Match erfasst, Tabelle/Einzelwertung aktualisierten sich korrekt ohne Reload.
 
 ### Desktop-Hülle (Tauri) — noch offen
@@ -139,6 +154,6 @@ Siehe Projekt-Historie für die vollständige Diskussion. Kurzfassung der Phasen
 | 0 | Fundament: Prisma-Schema, Grundgerüst Backend/Frontend, Logo, Repo-Setup, Migrationsskript für `database.db` | ✅ abgeschlossen |
 | 1 | MVP lokal: Saison-, Ergebnis-, Mannschaftsverwaltung, Tabellenberechnung (SQLite, offline) | ✅ abgeschlossen — Saison anlegen, Ergebniserfassung, Tabelle, Einzelwertung, Mannschaft bearbeiten (inkl. Umbenennen) end-to-end lauffähig |
 | 2 | PDF-Export nachbauen | ✅ abgeschlossen — Termine/Gesamtergebnis/Einzelergebnisse als PDF, siehe `domain/pdf.ts` |
-| 3 | Zentral-Hosting-Variante: Docker-Deployment, Postgres, Web-Ansicht, User-Management | 🟡 Docker-Image + Postgres-Schema stehen (Details unten), User-Management/Auth noch offen |
+| 3 | Zentral-Hosting-Variante: Docker-Deployment, Postgres, Web-Ansicht, User-Management | 🟡 Docker-Image, Postgres-Schema und Login/Auth stehen (Details unten); echter Docker/Postgres-Lauf nicht verifiziert |
 | 4 | Alten Sync-Mechanismus ablösen, E-Mail-Versand modernisieren | offen |
 | 5 | Rollout: Altdaten-Import bei den Vereinen, Parallelbetrieb, Cutover | offen |

@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { prisma } from "../db.js";
 import { isAgeGroup } from "../domain/ageGroup.js";
+import { requireAuth } from "../auth.js";
 
 type ShootInput = {
   firstName: string;
@@ -30,7 +31,7 @@ export const matchesRoutes: FastifyPluginAsync = async (app) => {
   // match. Primary shoots need both first and last name to be persisted;
   // additional/substitute shoots only need a first name (matches the
   // legacy asymmetric check in updateMatch()).
-  app.put<{ Params: { id: string }; Body: SaveMatchBody }>("/matches/:id", async (request, reply) => {
+  app.put<{ Params: { id: string }; Body: SaveMatchBody }>("/matches/:id", { preHandler: requireAuth }, async (request, reply) => {
     const matchId = Number(request.params.id);
     const { homeShoots, guestShoots, additionalHomeShoots, additionalGuestShoots } = request.body;
 

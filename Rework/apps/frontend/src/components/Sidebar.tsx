@@ -1,4 +1,5 @@
 import type { SeasonSummary } from "../types";
+import type { AuthUser } from "../api/client";
 import { theme } from "../theme";
 
 type Props = {
@@ -6,11 +7,13 @@ type Props = {
   selectedId: number | null;
   onSelect: (id: number) => void;
   onCreateClick: () => void;
+  user: AuthUser | null;
+  onLogout: () => void;
 };
 
-export function Sidebar({ seasons, selectedId, onSelect, onCreateClick }: Props) {
+export function Sidebar({ seasons, selectedId, onSelect, onCreateClick, user, onLogout }: Props) {
   return (
-    <aside style={{ width: 220, background: theme.bg, padding: "20px 16px", flexShrink: 0 }}>
+    <aside style={{ width: 220, background: theme.bg, padding: "20px 16px", flexShrink: 0, display: "flex", flexDirection: "column" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 24 }}>
         <img src="/logo.svg" alt="" width={32} height={32} />
         <strong style={{ color: theme.green, fontSize: 15 }}>SchützenManager</strong>
@@ -56,6 +59,17 @@ export function Sidebar({ seasons, selectedId, onSelect, onCreateClick }: Props)
           {season.label} ({season.year})
         </button>
       ))}
+      {user && (
+        <div style={{ marginTop: "auto", paddingTop: 16, borderTop: `1px solid ${theme.border}` }}>
+          <div style={{ fontSize: 12, color: theme.textMuted, marginBottom: 6 }}>{user.realName}</div>
+          <button
+            onClick={onLogout}
+            style={{ border: `1px solid ${theme.border}`, background: "#fff", borderRadius: 6, padding: "4px 10px", fontSize: 12, cursor: "pointer" }}
+          >
+            Abmelden
+          </button>
+        </div>
+      )}
     </aside>
   );
 }
