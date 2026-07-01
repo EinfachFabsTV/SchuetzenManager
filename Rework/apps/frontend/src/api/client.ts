@@ -1,4 +1,4 @@
-import type { Match, PersonalScoreRow, SeasonDetail, SeasonSummary, TableRow } from "../types";
+import type { Match, PersonalScoreRow, SeasonDetail, SeasonSummary, TableRow, Team } from "../types";
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`/api${path}`, {
@@ -37,6 +37,7 @@ export const api = {
       additionalGuestShoots?: ShootFormRow[];
     },
   ) => request<Match>(`/matches/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  updateTeam: (id: number, data: NewTeamInput) => request<Team>(`/teams/${id}`, { method: "PUT", body: JSON.stringify(data) }),
 };
 
 export type ShootFormRow = {

@@ -52,7 +52,7 @@ export function SeasonView({ seasonId }: { seasonId: number }) {
         ))}
       </div>
 
-      {tab === "Übersicht" && <OverviewTab season={season} />}
+      {tab === "Übersicht" && <OverviewTab season={season} onTeamUpdated={() => setRefreshKey((k) => k + 1)} />}
       {tab === "Wettkämpfe" && <MatchesTab season={season} onMatchSaved={() => setRefreshKey((k) => k + 1)} />}
       {tab === "Schützen/innen" && <ShootersTab seasonId={season.id} />}
     </div>

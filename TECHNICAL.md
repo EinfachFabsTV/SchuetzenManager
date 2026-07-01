@@ -50,6 +50,7 @@ Die Domänenlogik (Fastify-Routen, Prisma-Schema) ist in beiden Modi identisch �
   - `GET /seasons/:id/table` (Tabelle: Sieg/Niederlage/Unentschieden/Ringe/Punkte, siehe `domain/table.ts`)
   - `GET /seasons/:id/personal-scores` (Einzelwertung je Schütze, siehe `domain/personalScores.ts`)
   - `PUT /matches/:id` (Ergebnis eines Matches speichern, ersetzt alle Shoot-Zeilen, siehe `routes/matches.ts`)
+  - `PUT /teams/:id` (Mannschaft bearbeiten/umbenennen, siehe `routes/teams.ts`). Da Matches/Shoots die Mannschaft über die Surrogate-ID referenzieren statt über den Namen, ist eine Umbenennung eine reine Attribut-Änderung — anders als in `Database.java#updateTeam()` ist kein Cascade-Update über mehrere Tabellen nötig.
 
 ### Frontend (`Rework/apps/frontend`)
 
@@ -107,7 +108,7 @@ Siehe Projekt-Historie für die vollständige Diskussion. Kurzfassung der Phasen
 | Phase | Inhalt | Status |
 |---|---|---|
 | 0 | Fundament: Prisma-Schema, Grundgerüst Backend/Frontend, Logo, Repo-Setup, Migrationsskript für `database.db` | ✅ abgeschlossen |
-| 1 | MVP lokal: Saison-, Ergebnis-, Mannschaftsverwaltung, Tabellenberechnung (SQLite, offline) | 🟡 Saison anlegen, Ergebniserfassung, Tabelle, Einzelwertung end-to-end lauffähig (Backend + Frontend); Mannschaftsverwaltung (Umbenennen etc.) noch offen |
+| 1 | MVP lokal: Saison-, Ergebnis-, Mannschaftsverwaltung, Tabellenberechnung (SQLite, offline) | ✅ abgeschlossen — Saison anlegen, Ergebniserfassung, Tabelle, Einzelwertung, Mannschaft bearbeiten (inkl. Umbenennen) end-to-end lauffähig |
 | 2 | PDF-Export nachbauen | offen |
 | 3 | Zentral-Hosting-Variante: Docker-Deployment, Postgres, Web-Ansicht, User-Management | offen |
 | 4 | Alten Sync-Mechanismus ablösen, E-Mail-Versand modernisieren | offen |

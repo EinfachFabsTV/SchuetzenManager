@@ -29,15 +29,15 @@ Ursprünglich entwickelt von **Christian Kater** als Java-8/JavaFX-Desktop-Proje
   <img src="docs/screenshots/new-ui-concept.svg" alt="Design-Richtung der neuen Oberfläche" width="720" />
 </p>
 
-*Design-Mockup der Ziel-Optik — die Kernfunktionen (Saison mit automatischem Spielplan anlegen, Ergebnis erfassen, Tabelle/Einzelwertung live berechnen) sind im [Rework/](Rework/)-Frontend bereits lauffähig und manuell durchgetestet; UI-Feinschliff/Team-Verwaltung folgt noch.*
+*Design-Mockup der Ziel-Optik — Phase 1 (Saison mit automatischem Spielplan anlegen, Ergebnis erfassen, Tabelle/Einzelwertung live berechnen, Mannschaften bearbeiten) ist im [Rework/](Rework/)-Frontend komplett lauffähig und manuell durchgetestet; UI-Feinschliff folgt in weiteren Phasen.*
 
 ## Status
 
 | Bereich | Stand |
 |---|---|
 | Legacy (Java/JavaFX) | funktionsfähig, unverändert in [Legacy/](Legacy/) |
-| Rework — Backend (Fastify + Prisma) | Saison anlegen (inkl. automatischem Spielplan), Ergebniserfassung, Tabelle, Einzelwertung, Migrationsskript für `database.db` — alles verifiziert |
-| Rework — Frontend (React + Vite) | Saisonliste, Saison-Erstellungsformular, Ergebniserfassung, Tabellen-/Einzelwertungsansicht funktionieren end-to-end; Team-Verwaltung (Umbenennen etc.) noch offen |
+| Rework — Backend (Fastify + Prisma) | Saison anlegen (inkl. automatischem Spielplan), Ergebniserfassung, Tabelle, Einzelwertung, Mannschaft bearbeiten, Migrationsskript für `database.db` — alles verifiziert |
+| Rework — Frontend (React + Vite) | **Phase 1 MVP komplett**: Saisonliste, Saison-Erstellung, Ergebniserfassung, Tabelle/Einzelwertung, Mannschaftsverwaltung |
 | Rework — Desktop-Hülle (Tauri) | noch offen (Rust-Toolchain nötig) |
 | Zentrales Hosting | geplant, noch nicht umgesetzt |
 

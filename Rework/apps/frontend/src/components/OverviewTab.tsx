@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { SeasonDetail, TableRow } from "../types";
 import { theme } from "../theme";
+import { EditTeamForm } from "./EditTeamForm";
 
-export function OverviewTab({ season }: { season: SeasonDetail }) {
+export function OverviewTab({ season, onTeamUpdated }: { season: SeasonDetail; onTeamUpdated: () => void }) {
   const [table, setTable] = useState<TableRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [editingTeamId, setEditingTeamId] = useState<number | null>(null);
 
   useEffect(() => {
     setTable(null);
@@ -14,6 +16,21 @@ export function OverviewTab({ season }: { season: SeasonDetail }) {
       .then(setTable)
       .catch((err) => setError(err.message));
   }, [season.id]);
+
+  const editingTeam = season.teams.find((t) => t.id === editingTeamId) ?? null;
+
+  if (editingTeam) {
+    return (
+      <EditTeamForm
+        team={editingTeam}
+        onCancel={() => setEditingTeamId(null)}
+        onSaved={() => {
+          setEditingTeamId(null);
+          onTeamUpdated();
+        }}
+      />
+    );
+  }
 
   return (
     <div>
@@ -55,6 +72,7 @@ export function OverviewTab({ season }: { season: SeasonDetail }) {
             <th style={{ padding: "6px 8px" }}>Uhrzeit</th>
             <th style={{ padding: "6px 8px" }}>Ort</th>
             <th style={{ padding: "6px 8px" }}>Ansprechpartner</th>
+            <th style={{ padding: "6px 8px" }}></th>
           </tr>
         </thead>
         <tbody>
@@ -65,6 +83,14 @@ export function OverviewTab({ season }: { season: SeasonDetail }) {
               <td style={{ padding: "6px 8px" }}>{team.trainingTime ?? "-"}</td>
               <td style={{ padding: "6px 8px" }}>{team.location ?? "-"}</td>
               <td style={{ padding: "6px 8px" }}>{team.contact ?? "-"}</td>
+              <td style={{ padding: "6px 8px" }}>
+                <button
+                  onClick={() => setEditingTeamId(team.id)}
+                  style={{ border: `1px solid ${theme.border}`, background: "#fff", borderRadius: 6, padding: "4px 10px", fontSize: 12, cursor: "pointer" }}
+                >
+                  Bearbeiten
+                </button>
+              </td>
             </tr>
           ))}
         </tbody>
