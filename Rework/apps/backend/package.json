@@ -8,13 +8,15 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev"
+    "prisma:migrate": "prisma migrate dev",
+    "migrate:legacy": "tsx scripts/migrate-legacy.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.20.0",
     "fastify": "^4.28.1"
   },
   "devDependencies": {
+    "@types/node": "^22.7.5",
     "prisma": "^5.20.0",
     "tsx": "^4.19.1",
     "typescript": "^5.6.2"
