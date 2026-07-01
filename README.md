@@ -4,7 +4,7 @@
 
 Verwaltung von Rundenwettkampf-Saisons für Schießsportvereine: Mannschaften, Ergebniserfassung, automatische Tabellen- und Einzelwertungsberechnung, PDF-Export und Web-Sync.
 
-Ursprünglich ein Java-8/JavaFX-Desktop-Projekt für den Schützenkreis Meppen. Wird aktuell auf einen modernen, plattformunabhängigen Stack migriert — siehe [TECHNICAL.md](TECHNICAL.md) für Architektur, Setup und den Migrationsstand.
+Ursprünglich entwickelt von **Christian Kater** als Java-8/JavaFX-Desktop-Projekt für den Schützenkreis Meppen (siehe [Legacy/](Legacy/)). Wird aktuell auf einen modernen, plattformunabhängigen Stack migriert — siehe [TECHNICAL.md](TECHNICAL.md) für Architektur, Setup und den Migrationsstand.
 
 ## Funktionen
 
@@ -35,7 +35,7 @@ Ursprünglich ein Java-8/JavaFX-Desktop-Projekt für den Schützenkreis Meppen. 
 
 | Bereich | Stand |
 |---|---|
-| Legacy (Java/JavaFX) | funktionsfähig, unverändert im Repo-Root |
+| Legacy (Java/JavaFX) | funktionsfähig, unverändert in [Legacy/](Legacy/) |
 | Rework — Backend (Fastify + Prisma) | Grundgerüst läuft, Datenmodell aus Legacy-Schema abgeleitet, Migrationsskript für `database.db` verifiziert |
 | Rework — Frontend (React + Vite) | Grundgerüst läuft, erste Anbindung ans Backend |
 | Rework — Desktop-Hülle (Tauri) | noch offen (Rust-Toolchain nötig) |
@@ -43,4 +43,4 @@ Ursprünglich ein Java-8/JavaFX-Desktop-Projekt für den Schützenkreis Meppen. 
 
 ## Lizenz / Copyright
 
-Der ursprüngliche Java-Code steht unter der in [LICENSE](LICENSE) genannten Lizenz. Logo und Rework-Markenzeichen: © Fabian L.
+Der ursprüngliche Java-Code (© Christian Kater) steht unter der in [LICENSE](LICENSE) genannten Lizenz. Logo und Rework-Markenzeichen: © 2026 Fabian L.

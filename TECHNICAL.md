@@ -4,7 +4,7 @@
 
 Dieses Repo enthält zwei Codebasen nebeneinander, bis die Neuentwicklung Feature-Parität erreicht:
 
-- **Legacy** (Repo-Root: `src/`, `lib/`, `build.fxbuild`, `.project`) — Java 8 / JavaFX-Desktop-App. Details siehe [CLAUDE.md](CLAUDE.md).
+- **[Legacy/](Legacy/)** (`src/`, `lib/`, `build.fxbuild`, `.project`) — Java 8 / JavaFX-Desktop-App von Christian Kater, dem ursprünglichen Autor des Projekts. Details siehe [CLAUDE.md](CLAUDE.md).
 - **Rework** ([Rework/](Rework/)) — Neuentwicklung als Cross-Platform-Anwendung.
 
 ## Rework-Architektur
@@ -29,7 +29,7 @@ Die Domänenlogik (Fastify-Routen, Prisma-Schema) ist in beiden Modi identisch �
 ### Backend (`Rework/apps/backend`)
 
 - **Fastify** als HTTP-Server, **Prisma** als ORM.
-- `prisma/schema.prisma`: Datenmodell, abgeleitet aus dem bestehenden SQLite-Schema in [src/database/Database.java](src/database/Database.java), aber normalisiert mit Surrogate-Keys statt der ursprünglichen zusammengesetzten Natural Keys (`hometeam, guestteam, season, ...`).
+- `prisma/schema.prisma`: Datenmodell, abgeleitet aus dem bestehenden SQLite-Schema in [Legacy/src/database/Database.java](Legacy/src/database/Database.java), aber normalisiert mit Surrogate-Keys statt der ursprünglichen zusammengesetzten Natural Keys (`hometeam, guestteam, season, ...`).
 
   | Legacy-Tabelle | Rework-Modell |
   |---|---|

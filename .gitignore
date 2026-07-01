@@ -1,10 +1,10 @@
 # Java build output
-/bin/
+Legacy/bin/
 *.class
 
 # Runtime data (created next to the executable, not source)
-database.db
-config.properties
+Legacy/database.db
+Legacy/config.properties
 
 # Node / future rework tooling
 node_modules/
