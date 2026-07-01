@@ -1,0 +1,21 @@
+# Java build output
+/bin/
+*.class
+
+# Runtime data (created next to the executable, not source)
+database.db
+config.properties
+
+# Node / future rework tooling
+node_modules/
+dist/
+build/
+.env
+.env.*
+
+# Rust / Tauri
+Rework/**/target/
+
+# OS/editor
+.DS_Store
+Thumbs.db

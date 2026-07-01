@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.text.*?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.control.*?>
+<?import java.lang.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import fxmltableview.*?>
+<?import javafx.scene.control.cell.*?>
+
+<fx:root maxHeight="1.7976931348623157E308" maxWidth="800.0" minHeight="700.0" minWidth="800.0" prefHeight="700.0" prefWidth="800.0" type="javafx.scene.layout.GridPane" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+	<columnConstraints>
+		<ColumnConstraints hgrow="SOMETIMES" maxWidth="530.0" minWidth="530.0" prefWidth="530.0" />
+      <ColumnConstraints hgrow="SOMETIMES" maxWidth="125.0" minWidth="125.0" prefWidth="125.0" />
+      <ColumnConstraints hgrow="SOMETIMES" maxWidth="125.0" minWidth="125.0" prefWidth="125.0" />
+	</columnConstraints>
+	<rowConstraints>
+      <RowConstraints maxHeight="30.0" minHeight="30.0" prefHeight="30.0" vgrow="SOMETIMES" />
+      <RowConstraints maxHeight="30.0" minHeight="30.0" prefHeight="30.0" vgrow="SOMETIMES" />
+		<RowConstraints maxHeight="1.7976931348623157E308" minHeight="150.0" prefHeight="150.0" vgrow="SOMETIMES" />
+      <RowConstraints maxHeight="30.0" minHeight="30.0" prefHeight="30.0" vgrow="SOMETIMES" />
+      <RowConstraints maxHeight="1.7976931348623157E308" minHeight="50.0" prefHeight="150.0" vgrow="SOMETIMES" />
+      <RowConstraints maxHeight="30.0" minHeight="30.0" prefHeight="30.0" vgrow="SOMETIMES" />
+      <RowConstraints maxHeight="30.0" minHeight="30.0" prefHeight="30.0" vgrow="SOMETIMES" />
+      <RowConstraints maxHeight="1.7976931348623157E308" minHeight="150.0" prefHeight="150.0" vgrow="SOMETIMES" />
+      <RowConstraints maxHeight="30.0" minHeight="30.0" prefHeight="30.0" vgrow="SOMETIMES" />
+      <RowConstraints maxHeight="1.7976931348623157E308" minHeight="50.0" prefHeight="150.0" vgrow="SOMETIMES" />
+      <RowConstraints maxHeight="30.0" minHeight="30.0" prefHeight="30.0" vgrow="SOMETIMES" />
+      <RowConstraints maxHeight="30.0" minHeight="30.0" prefHeight="30.0" vgrow="SOMETIMES" />
+	</rowConstraints>
+	<padding>
+		<Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+	</padding>
+   <children>
+      <Label text="Lokal" GridPane.rowIndex="1">
+         <font>
+            <Font name="System Bold" size="14.0" />
+         </font></Label>
+      <Label fx:id="matchLbl" text="Label" GridPane.columnSpan="2">
+         <font>
+            <Font name="System Bold" size="16.0" />
+         </font>
+      </Label>
+      <TableView fx:id="localShootsTable" prefHeight="200.0" prefWidth="200.0" GridPane.columnSpan="3" GridPane.rowIndex="2">
+        <columns>
+          <TableColumn maxWidth="200.0" minWidth="150.0" prefWidth="200.0" text="Vorname">
+					<cellValueFactory>
+						<PropertyValueFactory property="firstname" />
+					</cellValueFactory>
+				</TableColumn>
+          <TableColumn maxWidth="200.0" minWidth="150.0" prefWidth="200.0" text="Nachname">
+					<cellValueFactory>
+						<PropertyValueFactory property="lastname" />
+					</cellValueFactory>
+				</TableColumn>
+            <TableColumn maxWidth="150.0" minWidth="150.0" prefWidth="150.0" text="Altersklasse">
+					<cellValueFactory>
+						<PropertyValueFactory property="agegroup" />
+					</cellValueFactory>
+				</TableColumn>
+            <TableColumn maxWidth="75.0" minWidth="75.0" prefWidth="75.0" text="Start">
+					<cellValueFactory>
+						<PropertyValueFactory property="startIDString" />
+					</cellValueFactory>
+				</TableColumn>
+            <TableColumn maxWidth="75.0" minWidth="75.0" prefWidth="75.0" text="Ende">
+					<cellValueFactory>
+						<PropertyValueFactory property="endIDString" />
+					</cellValueFactory>
+				</TableColumn>
+            <TableColumn maxWidth="75.0" minWidth="75.0" prefWidth="75.0" text="Ergebnis">
+					<cellValueFactory>
+						<PropertyValueFactory property="score" />
+					</cellValueFactory>
+				</TableColumn>
+        </columns>
+      </TableView>
+      <Label text="Webdienst" GridPane.rowIndex="6">
+         <GridPane.margin>
+            <Insets />
+         </GridPane.margin>
+         <font>
+            <Font name="System Bold" size="14.0" />
+         </font>
+      </Label>
+      
+      <TableView fx:id="remoteShootsTable" prefHeight="200.0" prefWidth="200.0" GridPane.columnSpan="3" GridPane.rowIndex="7">
+        <columns>
+          <TableColumn maxWidth="200.0" minWidth="150.0" prefWidth="200.0" text="Vorname">
+					<cellValueFactory>
+						<PropertyValueFactory property="firstname" />
+					</cellValueFactory>
+				</TableColumn>
+          <TableColumn maxWidth="200.0" minWidth="150.0" prefWidth="200.0" text="Nachname">
+					<cellValueFactory>
+						<PropertyValueFactory property="lastname" />
+					</cellValueFactory>
+				</TableColumn>
+            <TableColumn maxWidth="150.0" minWidth="150.0" prefWidth="150.0" text="Altersklasse">
+					<cellValueFactory>
+						<PropertyValueFactory property="agegroup" />
+					</cellValueFactory>
+				</TableColumn>
+            <TableColumn maxWidth="75.0" minWidth="75.0" prefWidth="75.0" text="Start">
+					<cellValueFactory>
+						<PropertyValueFactory property="startIDString" />
+					</cellValueFactory>
+				</TableColumn>
+            <TableColumn maxWidth="75.0" minWidth="75.0" prefWidth="75.0" text="Ende">
+					<cellValueFactory>
+						<PropertyValueFactory property="endIDString" />
+					</cellValueFactory>
+				</TableColumn>
+            <TableColumn maxWidth="75.0" minWidth="75.0" prefWidth="75.0" text="Ergebnis">
+					<cellValueFactory>
+						<PropertyValueFactory property="score" />
+					</cellValueFactory>
+				</TableColumn>
+        </columns>
+      </TableView>
+      <Label text="Wollen Sie die Daten des Webdienstes übernehmen?" GridPane.rowIndex="11" />
+      <TableView fx:id="localAddShootsTable" layoutX="20.0" layoutY="80.0" prefHeight="200.0" prefWidth="200.0" GridPane.columnSpan="3" GridPane.rowIndex="4">
+         <columns>
+            <TableColumn maxWidth="200.0" minWidth="150.0" prefWidth="200.0" text="Vorname">
+               <cellValueFactory>
+                  <PropertyValueFactory property="firstname" />
+               </cellValueFactory>
+            </TableColumn>
+            <TableColumn maxWidth="200.0" minWidth="150.0" prefWidth="200.0" text="Nachname">
+               <cellValueFactory>
+                  <PropertyValueFactory property="lastname" />
+               </cellValueFactory>
+            </TableColumn>
+            <TableColumn maxWidth="150.0" minWidth="150.0" prefWidth="150.0" text="Altersklasse">
+               <cellValueFactory>
+                  <PropertyValueFactory property="agegroup" />
+               </cellValueFactory>
+            </TableColumn>
+            <TableColumn maxWidth="75.0" minWidth="75.0" prefWidth="75.0" text="Start">
+               <cellValueFactory>
+                  <PropertyValueFactory property="startIDString" />
+               </cellValueFactory>
+            </TableColumn>
+            <TableColumn maxWidth="75.0" minWidth="75.0" prefWidth="75.0" text="Ende">
+               <cellValueFactory>
+                  <PropertyValueFactory property="endIDString" />
+               </cellValueFactory>
+            </TableColumn>
+            <TableColumn maxWidth="75.0" minWidth="75.0" prefWidth="75.0" text="Ergebnis">
+               <cellValueFactory>
+                  <PropertyValueFactory property="score" />
+               </cellValueFactory>
+            </TableColumn>
+         </columns>
+      </TableView>
+      <Label text="Zusätzliche Schützen/innen in Einzelwertung" GridPane.rowIndex="3" />
+      <Label text="Zusätzliche Schützen/innen in Einzelwertung" GridPane.rowIndex="8" />
+      <TableView fx:id="remoteAddShootsTable" layoutX="20.0" layoutY="197.0" prefHeight="200.0" prefWidth="200.0" GridPane.columnSpan="3" GridPane.rowIndex="9">
+         <columns>
+            <TableColumn maxWidth="200.0" minWidth="150.0" prefWidth="200.0" text="Vorname">
+               <cellValueFactory>
+                  <PropertyValueFactory property="firstname" />
+               </cellValueFactory>
+            </TableColumn>
+            <TableColumn maxWidth="200.0" minWidth="150.0" prefWidth="200.0" text="Nachname">
+               <cellValueFactory>
+                  <PropertyValueFactory property="lastname" />
+               </cellValueFactory>
+            </TableColumn>
+            <TableColumn maxWidth="150.0" minWidth="150.0" prefWidth="150.0" text="Altersklasse">
+               <cellValueFactory>
+                  <PropertyValueFactory property="agegroup" />
+               </cellValueFactory>
+            </TableColumn>
+            <TableColumn maxWidth="75.0" minWidth="75.0" prefWidth="75.0" text="Start">
+               <cellValueFactory>
+                  <PropertyValueFactory property="startIDString" />
+               </cellValueFactory>
+            </TableColumn>
+            <TableColumn maxWidth="75.0" minWidth="75.0" prefWidth="75.0" text="Ende">
+               <cellValueFactory>
+                  <PropertyValueFactory property="endIDString" />
+               </cellValueFactory>
+            </TableColumn>
+            <TableColumn maxWidth="75.0" minWidth="75.0" prefWidth="75.0" text="Ergebnis">
+               <cellValueFactory>
+                  <PropertyValueFactory property="score" />
+               </cellValueFactory>
+            </TableColumn>
+         </columns>
+      </TableView>
+   </children>
+</fx:root>

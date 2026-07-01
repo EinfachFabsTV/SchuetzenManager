@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.collections.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import java.lang.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.collections.FXCollections?>
+
+<fx:root hgap="5.0" maxWidth="800.0" minWidth="800.0" prefWidth="800.0" type="javafx.scene.layout.GridPane" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+   <children>
+      <TextField fx:id="firstname" />
+      <TextField fx:id="lastname" GridPane.columnIndex="1" />
+      <ChoiceBox fx:id="ageclass" maxWidth="1.7976931348623157E308" prefWidth="150.0" value="Schützenklasse" GridPane.columnIndex="2">
+         <items>
+            <FXCollections fx:factory="observableArrayList">
+               <String fx:value="Schützenklasse" />
+               <String fx:value="Senioren" />
+            </FXCollections>
+         </items>
+      </ChoiceBox>
+      <TextField fx:id="start" GridPane.columnIndex="3" />
+      <TextField fx:id="end" GridPane.columnIndex="4" />
+      <TextField fx:id="score" GridPane.columnIndex="5" />
+   </children>
+   <columnConstraints>
+      <ColumnConstraints hgrow="SOMETIMES" maxWidth="150.0" minWidth="150.0" prefWidth="150.0" />
+      <ColumnConstraints hgrow="SOMETIMES" maxWidth="150.0" minWidth="150.0" prefWidth="150.0" />
+      <ColumnConstraints hgrow="SOMETIMES" maxWidth="135.0" minWidth="135.0" prefWidth="135.0" />
+      <ColumnConstraints hgrow="SOMETIMES" maxWidth="100.0" minWidth="100.0" prefWidth="100.0" />
+      <ColumnConstraints hgrow="SOMETIMES" maxWidth="100.0" minWidth="100.0" prefWidth="100.0" />
+      <ColumnConstraints hgrow="SOMETIMES" maxWidth="100.0" minWidth="75.0" prefWidth="100.0" />
+   </columnConstraints>
+   <rowConstraints>
+      <RowConstraints maxHeight="30.0" minHeight="30.0" prefHeight="30.0" vgrow="SOMETIMES" />
+   </rowConstraints>
+</fx:root>

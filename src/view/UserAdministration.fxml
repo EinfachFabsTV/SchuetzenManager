@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.text.*?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.control.*?>
+<?import java.lang.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import fxmltableview.*?>
+<?import javafx.scene.control.cell.*?>
+
+<fx:root maxHeight="500.0" maxWidth="800.0" minHeight="500.0" minWidth="800.0" prefHeight="500.0" prefWidth="800.0" type="javafx.scene.layout.GridPane" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+	<columnConstraints>
+		<ColumnConstraints hgrow="SOMETIMES" maxWidth="50.0" minWidth="50.0" prefWidth="50.0" />
+      <ColumnConstraints hgrow="SOMETIMES" maxWidth="315.0" minWidth="315.0" prefWidth="315.0" />
+		<ColumnConstraints hgrow="SOMETIMES" maxWidth="165.0" minWidth="165.0" prefWidth="165.0" />
+		<ColumnConstraints hgrow="SOMETIMES" maxWidth="125.0" minWidth="125.0" prefWidth="125.0" />
+		<ColumnConstraints hgrow="SOMETIMES" maxWidth="75.0" minWidth="75.0" prefWidth="75.0" />
+		<ColumnConstraints hgrow="SOMETIMES" maxWidth="50.0" minWidth="50.0" prefWidth="50.0" />
+	</columnConstraints>
+	<rowConstraints>
+		<RowConstraints maxHeight="30.0" minHeight="30.0" prefHeight="30.0" vgrow="SOMETIMES" />
+		<RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+		<RowConstraints maxHeight="30.0" minHeight="30.0" prefHeight="30.0" vgrow="SOMETIMES" />
+	</rowConstraints>
+	<children>
+		<TextField fx:id="name" promptText="Name" GridPane.columnSpan="2">
+			<GridPane.margin>
+				<Insets right="5.0" />
+			</GridPane.margin>
+		</TextField>
+		<TextField fx:id="email" promptText="E-Mail" GridPane.columnIndex="2" GridPane.columnSpan="3">
+			<GridPane.margin>
+				<Insets left="5.0" />
+			</GridPane.margin>
+		</TextField>
+		<Button fx:id="add" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#add" text="+" GridPane.columnIndex="5">
+			<GridPane.margin>
+				<Insets left="10.0" />
+			</GridPane.margin>
+		</Button>
+		<Button fx:id="save" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#save" text="Speichern" GridPane.columnIndex="4" GridPane.columnSpan="2" GridPane.rowIndex="2">
+			<GridPane.margin>
+				<Insets left="5.0" />
+			</GridPane.margin>
+		</Button>
+		<TableView fx:id="usertable" prefHeight="200.0" prefWidth="200.0" GridPane.columnSpan="6" GridPane.rowIndex="1">
+			<columns>
+				<TableColumn maxWidth="330.0" minWidth="330.0" prefWidth="330.0" text="Name">
+					<cellValueFactory>
+						<PropertyValueFactory property="name" />
+					</cellValueFactory>
+				</TableColumn>
+				<TableColumn maxWidth="330.0" minWidth="330.0" prefWidth="330.0" text="E-Mail">
+					<cellValueFactory>
+						<PropertyValueFactory property="email" />
+					</cellValueFactory>
+				</TableColumn>
+            <TableColumn maxWidth="115.0" minWidth="115.0" prefWidth="115.0" text="Benachr.">
+					<cellValueFactory>
+						<PropertyValueFactory property="newPassword" />
+					</cellValueFactory>
+				</TableColumn>
+			</columns>
+			<GridPane.margin>
+				<Insets bottom="10.0" top="10.0" />
+			</GridPane.margin>
+		</TableView>
+		<Button fx:id="cancel" maxWidth="1.7976931348623157E308" minWidth="70.0" mnemonicParsing="false" onAction="#cancel" text="Abbrechen" GridPane.columnIndex="3" GridPane.halignment="RIGHT" GridPane.rowIndex="2">
+			<GridPane.margin>
+				<Insets right="5.0" />
+			</GridPane.margin>
+		</Button>
+      <ProgressIndicator fx:id="progress" progress="0.0" visible="false" GridPane.rowIndex="2" />
+      <Label fx:id="info" text="Label" visible="false" GridPane.columnIndex="1" GridPane.columnSpan="2" GridPane.rowIndex="2" />
+	</children>
+	<padding>
+		<Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+	</padding>
+</fx:root>
