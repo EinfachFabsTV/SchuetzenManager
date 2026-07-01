@@ -36,8 +36,8 @@ Ursprünglich entwickelt von **Christian Kater** als Java-8/JavaFX-Desktop-Proje
 | Bereich | Stand |
 |---|---|
 | Legacy (Java/JavaFX) | funktionsfähig, unverändert in [Legacy/](Legacy/) |
-| Rework — Backend (Fastify + Prisma) | Grundgerüst läuft, Datenmodell aus Legacy-Schema abgeleitet, Migrationsskript für `database.db` verifiziert |
-| Rework — Frontend (React + Vite) | Grundgerüst läuft, erste Anbindung ans Backend |
+| Rework — Backend (Fastify + Prisma) | Saison anlegen (inkl. automatischem Spielplan), Ergebniserfassung, Tabelle, Einzelwertung, Migrationsskript für `database.db` — alles verifiziert |
+| Rework — Frontend (React + Vite) | Grundgerüst läuft, UI für die neuen Backend-Funktionen noch offen |
 | Rework — Desktop-Hülle (Tauri) | noch offen (Rust-Toolchain nötig) |
 | Zentrales Hosting | geplant, noch nicht umgesetzt |
 
