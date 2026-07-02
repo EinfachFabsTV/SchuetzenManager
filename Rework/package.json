@@ -8,6 +8,15 @@
     "dev:backend": "npm run dev --workspace apps/backend",
     "dev:frontend": "npm run dev --workspace apps/frontend",
     "build:backend": "npm run build --workspace apps/backend",
-    "build:frontend": "npm run build --workspace apps/frontend"
+    "build:frontend": "npm run build --workspace apps/frontend",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.6.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.3",
+    "globals": "^17.7.0",
+    "typescript-eslint": "^8.62.1"
   }
 }

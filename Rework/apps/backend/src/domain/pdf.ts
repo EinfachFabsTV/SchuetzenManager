@@ -102,10 +102,10 @@ function drawHeading(w: PageWriter, season: PdfSeason, title: string) {
   w.y -= 24;
 }
 
-function drawTable(
+function drawTable<Row>(
   w: PageWriter,
-  columns: { header: string; width: number; align?: "left" | "right"; get: (row: any) => string }[],
-  rows: any[],
+  columns: { header: string; width: number; align?: "left" | "right"; get: (row: Row) => string }[],
+  rows: Row[],
 ) {
   const tableLeft = PAGE_MARGIN;
   const drawHeader = () => {

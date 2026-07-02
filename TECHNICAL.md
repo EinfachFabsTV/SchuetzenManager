@@ -129,6 +129,12 @@ Bis hierhin gab es im Frontend keinerlei automatisierte Tests, nur manuelles Dur
 
 35 Tests, alle grün, ~2s Laufzeit inkl. jsdom-Setup. `api`/`setToken` werden per `vi.mock` gemockt, da die Komponententests keine echte HTTP-Ebene brauchen — die ist bereits durch `api/client.test.ts` und die Backend-Integrationstests abgedeckt. `.github/workflows/ci.yml` führt `npm test` im Frontend-Workspace jetzt vor dem Build aus.
 
+### Linting (`npm run lint` im Rework-Root)
+
+Es gab bis dahin gar keine Lint-Konfiguration im Projekt. Ergänzt: ESLint (Flat Config, `Rework/eslint.config.mjs`) mit `typescript-eslint` für beide Workspaces, plus `eslint-plugin-react-hooks`/`eslint-plugin-react-refresh` fürs Frontend. Node-Globals (`process`, `console`) für Backend-Code und die Desktop-Build-Skripte (`apps/desktop/scripts/**/*.mjs`), Browser-Globals fürs Frontend.
+
+Der erste Lauf fand echte Probleme: zwei `any`-Typen in `domain/pdf.ts`s `drawTable()`-Helper (jetzt generisch über `<Row>` statt `any`, s. o.) sowie fehlende Node-Globals in `prepare-sidecar.mjs` (war schlicht in keiner Konfiguration erfasst). Eine Regel wurde bewusst deaktiviert: `react-hooks/set-state-in-effect` (Teil des neuen React-Compiler-orientierten `eslint-plugin-react-hooks`-Regelsatzes) markiert *jeden* synchronen `setState`-Aufruf in einem Effect als Fehler — trifft in `OverviewTab`/`SeasonView`/`ShootersTab` aber genau das idiomatische "Anzeige-State zurücksetzen, dann per Effect neu laden, wenn sich die ID ändert"-Muster, kein echtes Problem. `.github/workflows/ci.yml` führt `npm run lint` jetzt vor dem Typecheck aus.
+
 Verifiziert end-to-end (SQLite, lokal): mit `AUTH_ENABLED=false` (Standard) funktioniert alles wie vorher ohne Token. Mit `AUTH_ENABLED=true`: `POST /seasons` ohne Token → `401`; Erst-Registrierung → Token; zweite Registrierung → `403`; Login mit falschem Passwort → `401`; `POST /seasons` mit gültigem Token → `201`; `GET /seasons` bleibt ohne Token erreichbar. Im Frontend zusätzlich per Browser durchgespielt: Login-Screen erscheint, Erst-Registrierung, Saison mit Token anlegen, Session übersteht Reload, Abmelden führt zurück zum Login-Screen.
 
 ### Nutzerverwaltung + Mail (`routes/users.ts`, `src/mail.ts`)

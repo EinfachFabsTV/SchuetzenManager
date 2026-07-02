@@ -25,6 +25,10 @@ jobs:
         working-directory: Rework/apps/backend
         run: npm run prisma:generate
 
+      - name: Lint
+        working-directory: Rework
+        run: npm run lint
+
       - name: Backend type check
         working-directory: Rework/apps/backend
         run: npx tsc --noEmit -p tsconfig.json
