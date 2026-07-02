@@ -48,7 +48,15 @@ export default function App() {
                   onCancel={() => setView({ kind: "empty" })}
                 />
               )}
-              {view.kind === "season" && <SeasonView seasonId={view.id} />}
+              {view.kind === "season" && (
+                <SeasonView
+                  seasonId={view.id}
+                  onDeleted={() => {
+                    reloadSeasons();
+                    setView({ kind: "empty" });
+                  }}
+                />
+              )}
             </main>
           </div>
         )}

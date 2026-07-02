@@ -23,7 +23,9 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const token = getToken();
   const res = await fetch(`${API_BASE}${path}`, {
     headers: {
-      "Content-Type": "application/json",
+      // Fastify 5 rejects a request that declares Content-Type: application/json
+      // but has no body (e.g. DELETE calls) with a 400 FST_ERR_CTP_EMPTY_JSON_BODY.
+      ...(options?.body ? { "Content-Type": "application/json" } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     ...options,
@@ -32,6 +34,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error ?? `API-Fehler ${res.status}`);
   }
+  if (res.status === 204) return undefined as T;
   return res.json();
 }
 
@@ -52,6 +55,7 @@ export const api = {
   createSeason: (data: { year: number; label: string; teams: NewTeamInput[] }) =>
     request<SeasonDetail>("/seasons", { method: "POST", body: JSON.stringify(data) }),
   getSeason: (id: number) => request<SeasonDetail>(`/seasons/${id}`),
+  deleteSeason: (id: number) => request<void>(`/seasons/${id}`, { method: "DELETE" }),
   getTable: (id: number) => request<TableRow[]>(`/seasons/${id}/table`),
   getPersonalScores: (id: number) => request<PersonalScoreRow[]>(`/seasons/${id}/personal-scores`),
   saveMatch: (

@@ -10,11 +10,25 @@ import { theme } from "../theme";
 const TABS = ["Übersicht", "Wettkämpfe", "Schützen/innen"] as const;
 type Tab = (typeof TABS)[number];
 
-export function SeasonView({ seasonId }: { seasonId: number }) {
+export function SeasonView({ seasonId, onDeleted }: { seasonId: number; onDeleted: () => void }) {
   const [season, setSeason] = useState<SeasonDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("Übersicht");
   const [refreshKey, setRefreshKey] = useState(0);
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleDelete() {
+    if (!season) return;
+    if (!window.confirm(`Die Saison ${season.label} ${season.year} soll gelöscht werden?`)) return;
+    setDeleting(true);
+    try {
+      await api.deleteSeason(season.id);
+      onDeleted();
+    } catch (err) {
+      setError((err as Error).message);
+      setDeleting(false);
+    }
+  }
 
   useEffect(() => {
     setSeason(null);
@@ -34,7 +48,16 @@ export function SeasonView({ seasonId }: { seasonId: number }) {
         <h1 style={{ fontSize: 20, fontWeight: 600, margin: 0 }}>
           Saison {season.year} · {season.label}
         </h1>
-        <PdfExportButton seasonId={season.id} seasonLabel={`${season.label} ${season.year}`} />
+        <div style={{ display: "flex", gap: 8 }}>
+          <PdfExportButton seasonId={season.id} seasonLabel={`${season.label} ${season.year}`} />
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            style={{ border: `1px solid ${theme.danger}`, background: "transparent", color: theme.danger, borderRadius: 6, padding: "6px 12px", fontSize: 13, cursor: "pointer" }}
+          >
+            {deleting ? "Löscht…" : "Saison löschen"}
+          </button>
+        </div>
       </div>
       <div style={{ display: "flex", gap: 4, borderBottom: `1px solid ${theme.border}`, marginBottom: 20 }}>
         {TABS.map((t) => (

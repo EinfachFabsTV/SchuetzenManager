@@ -69,6 +69,20 @@ export const seasonsRoutes: FastifyPluginAsync = async (app) => {
     },
   );
 
+  // Mirrors MainWindow.java#deleteSeason(). Cascades to teams/matches/
+  // matchDates/shoots via the schema's onDelete: Cascade relations.
+  app.delete<{ Params: { id: string } }>("/seasons/:id", { preHandler: requireAuth }, async (request, reply) => {
+    const id = Number(request.params.id);
+    try {
+      await prisma.season.delete({ where: { id } });
+    } catch {
+      reply.code(404);
+      return { error: "Saison nicht gefunden." };
+    }
+    reply.code(204);
+    return null;
+  });
+
   app.get<{ Params: { id: string } }>("/seasons/:id", async (request, reply) => {
     const id = Number(request.params.id);
     const season = await prisma.season.findUnique({
