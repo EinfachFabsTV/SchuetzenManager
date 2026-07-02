@@ -29,8 +29,12 @@ jobs:
         working-directory: Rework/apps/backend
         run: npx tsc --noEmit -p tsconfig.json
 
-      - name: Backend domain tests
+      - name: Backend tests (domain + HTTP route integration)
         working-directory: Rework/apps/backend
+        run: npm test
+
+      - name: Frontend tests
+        working-directory: Rework/apps/frontend
         run: npm test
 
       - name: Frontend build (includes type check)
