@@ -2,44 +2,64 @@
   <img src="Rework/assets/logo/lockup.svg" alt="SchützenManager" width="420" />
 </p>
 
-Verwaltung von Rundenwettkampf-Saisons für Schießsportvereine: Mannschaften, Ergebniserfassung, automatische Tabellen- und Einzelwertungsberechnung, PDF-Export und Web-Sync.
+<p align="center">
+  Verwaltung von Rundenwettkampf-Saisons für Schießsportvereine — Mannschaften, Ergebniserfassung,<br/>
+  automatische Tabellen- und Einzelwertungsberechnung, PDF-Export und Web-Zugriff für Vereine/Zuschauer.
+</p>
 
-Ursprünglich entwickelt von **Christian Kater** als Java-8/JavaFX-Desktop-Projekt für den Schützenkreis Meppen (siehe [Legacy/](Legacy/)). Wird aktuell auf einen modernen, plattformunabhängigen Stack migriert — siehe [TECHNICAL.md](TECHNICAL.md) für Architektur, Setup und den Migrationsstand.
+---
+
+Ursprünglich entwickelt von **Christian Kater** als Java-8/JavaFX-Desktop-Projekt für den Schützenkreis Meppen (siehe [Legacy/](Legacy/)). Wird aktuell von Grund auf auf einen modernen, plattformunabhängigen Stack migriert (React + Fastify/Prisma, wahlweise als Desktop-App oder zentral gehostet) — siehe [TECHNICAL.md](TECHNICAL.md) für Architektur, Setup und den vollständigen Migrationsstand.
 
 ## Funktionen
 
-- Saisonverwaltung: neue Rundenwettkampf-Saison anlegen, automatischer Spielplan per Round-Robin
-- Ergebniserfassung pro Match (Heim-/Gastmannschaft, bis zu 4 Schützen + Ersatzschützen)
-- Automatische Tabellen- und Einzelwertungsberechnung
-- Mannschaftsverwaltung inkl. Umbenennung mit automatischer Nachführung
-- PDF-Export (Termine, Gesamtergebnis, Einzelergebnisse)
-- Web-Sync mit zentralem Dienst für Vereine/Zuschauer
+- **Saisonverwaltung** — neue Rundenwettkampf-Saison anlegen, automatischer Spielplan per Round-Robin
+- **Ergebniserfassung** pro Match (Heim-/Gastmannschaft, bis zu 4 Schützen + Ersatzschützen)
+- **Automatische Tabellen- und Einzelwertungsberechnung**, live bei jeder Ergebniseingabe
+- **Mannschaftsverwaltung** inkl. Umbenennung mit automatischer Nachführung
+- **PDF-Export** (Termine, Gesamtergebnis, Einzelergebnisse)
+- **Web-Zugriff für Vereine/Zuschauer** — Ergebnisse öffentlich einsehbar, Bearbeiten nur mit Login (optional, für zentrales Hosting)
 
-## So sieht es aktuell aus (Java/JavaFX)
+## Screenshots
 
-<p align="center">
-  <img src="docs/screenshots/legacy-ui-mockup.svg" alt="Nachbau der bestehenden JavaFX-Oberfläche" width="720" />
-</p>
+<table>
+<tr>
+<td align="center" width="50%">
 
-*Nachbau anhand der FXML-Layouts, kein Live-Screenshot — die App läuft nur unter Java 8 und startet in dieser Umgebung nicht.*
+**Legacy (Java/JavaFX)**
 
-## Wohin die Reise geht (Rework, in Arbeit)
+<img src="docs/screenshots/legacy-ui-mockup.svg" alt="Nachbau der bestehenden JavaFX-Oberfläche" width="100%" />
 
-<p align="center">
-  <img src="docs/screenshots/new-ui-concept.svg" alt="Design-Richtung der neuen Oberfläche" width="720" />
-</p>
+*Nachbau anhand der FXML-Layouts, kein Live-Screenshot — läuft nur unter Java 8.*
 
-*Design-Mockup der Ziel-Optik — Phase 1 (Saison mit automatischem Spielplan anlegen, Ergebnis erfassen, Tabelle/Einzelwertung live berechnen, Mannschaften bearbeiten) ist im [Rework/](Rework/)-Frontend komplett lauffähig und manuell durchgetestet; UI-Feinschliff folgt in weiteren Phasen.*
+</td>
+<td align="center" width="50%">
+
+**Rework (aktueller Stand)**
+
+<img src="docs/screenshots/new-ui-concept.svg" alt="Aktuelle Rework-Oberfläche" width="100%" />
+
+*Nachbau der tatsächlich lauffähigen, dunkel gehaltenen Oberfläche (fester Modus, kein Light/Dark-Umschalter).*
+
+</td>
+</tr>
+</table>
 
 ## Status
 
 | Bereich | Stand |
 |---|---|
-| Legacy (Java/JavaFX) | funktionsfähig, unverändert in [Legacy/](Legacy/) |
-| Rework — Backend (Fastify + Prisma) | Saison anlegen (inkl. automatischem Spielplan), Ergebniserfassung, Tabelle, Einzelwertung, Mannschaft bearbeiten, PDF-Export, Nutzerverwaltung + Mail-Versand, Migrationsskript für `database.db` — alles verifiziert |
-| Rework — Frontend (React + Vite) | **Phase 1 + 2 komplett**: Saisonliste, Saison-Erstellung, Ergebniserfassung, Tabelle/Einzelwertung, Mannschaftsverwaltung, PDF-Export, Login |
-| Rework — Desktop-Hülle (Tauri) | Gescaffoldet, baut erfolgreich (inkl. Windows-Installer als MSI/NSIS), App startet — Backend läuft noch nicht automatisch mit (kein Sidecar, siehe [TECHNICAL.md](TECHNICAL.md)) |
-| Zentrales Hosting (Docker + Postgres + Login) | Docker-Image, Postgres-Schema/-Migration und Login (opt-in per `AUTH_ENABLED`, öffentliche Lese-Ansicht bleibt erhalten) stehen und sind end-to-end getestet; echter `docker`-Lauf und Migration gegen eine laufende Postgres-Instanz noch nicht getestet (Details in [TECHNICAL.md](TECHNICAL.md)) |
+| **Legacy** (Java/JavaFX) | funktionsfähig, unverändert in [Legacy/](Legacy/) |
+| **Rework — Backend** (Fastify + Prisma) | Saison anlegen (inkl. Spielplan), Ergebniserfassung, Tabelle, Einzelwertung, Mannschaftspflege, PDF-Export, Nutzerverwaltung + Mail-Versand, Migrationsskript für `database.db` — alles verifiziert |
+| **Rework — Frontend** (React + Vite) | Saisonliste, Saison-Erstellung, Ergebniserfassung, Tabelle/Einzelwertung, Mannschaftsverwaltung, PDF-Export, Login — einheitliches dunkles Theme |
+| **Desktop-Hülle** (Tauri) | baut erfolgreich zu `.exe` + Windows-Installer (MSI/NSIS); Backend läuft noch nicht automatisch mit (kein Sidecar) |
+| **Zentrales Hosting** (Docker + Postgres + Login) | Docker-Image, Postgres-Schema/-Migration und optionales Login stehen und sind (bis auf einen echten Docker-Lauf) getestet |
+
+Details, offene Punkte und Testprotokolle zu jedem Punkt: [TECHNICAL.md](TECHNICAL.md).
+
+## Download
+
+Vorgefertigte Builds (Windows-Installer, portables ZIP, Linux) werden über die [GitHub Releases](../../releases) dieses Repos bereitgestellt, sobald ein Release veröffentlicht ist. Bis dahin: selbst bauen, siehe [TECHNICAL.md](TECHNICAL.md#setup--lokal-ausführen).
 
 ## Lizenz / Copyright
 

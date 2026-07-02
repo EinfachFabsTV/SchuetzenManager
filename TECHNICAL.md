@@ -123,8 +123,19 @@ Rust/Cargo (via `rustup`) und die Visual Studio Build Tools (MSVC C++-Toolchain,
 
 - `tauri.conf.json`: `frontendDist` zeigt auf `apps/frontend/dist`, `devUrl` auf den Vite-Dev-Server; `beforeDevCommand`/`beforeBuildCommand` wechseln ins Rework-Root und bauen/starten das Frontend über die npm-Workspace-Scripts. **Wichtig:** Beide Pfade sind relativ zu `apps/desktop` (dem Verzeichnis, das `src-tauri` enthält), nicht relativ zu `src-tauri` selbst — hat beim ersten Anlauf zu zwei falschen Pfad-Iterationen geführt, bevor es passte.
 - `package.json` im Desktop-Workspace nutzt `@tauri-apps/cli` (npm), sodass kein global installiertes `cargo tauri` nötig ist — nur die Rust-Toolchain selbst.
-- **Verifiziert:** `npm run build --workspace apps/desktop` (→ `cargo tauri build --debug`) kompiliert erfolgreich durch und erzeugt `app.exe` sowie eine MSI- und eine NSIS-Installer-Datei unter `src-tauri/target/debug/bundle/`. Die `app.exe` wurde gestartet und lief stabil als eigener Prozess (WebView2-Fenster).
+- `Cargo.toml`: Package-Metadaten (`name`, `description`, `authors`, `repository`) von den `cargo tauri init`-Platzhaltern (`app`/"A Tauri App"/"you") auf die echten Projektwerte umgestellt — der Binary-Name ist dadurch `schuetzenmanager.exe` statt `app.exe`.
+- **Verifiziert:** `npm run build --workspace apps/desktop` (→ `cargo tauri build --debug`) kompiliert erfolgreich durch und erzeugt `schuetzenmanager.exe` sowie eine MSI- und eine NSIS-Installer-Datei unter `src-tauri/target/debug/bundle/`. Die `.exe` wurde gestartet und lief stabil als eigener Prozess (WebView2-Fenster).
 - **Bekannte Lücke:** Die gebaute App lädt aktuell nur das statische Frontend, ohne den Fastify-Backend-Prozess automatisch mitzustarten (kein Sidecar). `/api`-Aufrufe schlagen daher in der gebauten App fehl, solange kein Backend separat läuft. Nächster Schritt: den kompilierten Backend-Build als [Tauri-Sidecar](https://tauri.app/develop/sidecar/) einbinden (Node selbst lässt sich nicht direkt in eine Rust-Binary einbetten — Optionen sind ein gebündelter Node-Runtime-Sidecar oder eine Kompilierung des Backends zu einem eigenständigen Executable, z. B. via `pkg`/`node --experimental-sea-config`).
+
+### Releases (`.github/workflows/release.yml`)
+
+GitHub-Actions-Workflow, der bei einem Tag-Push (`v*`) oder manuell (`workflow_dispatch`) über `tauri-apps/tauri-action` Windows- und Linux-Builds erstellt und als [GitHub Release](../../releases) veröffentlicht (als Entwurf, `releaseDraft: true`, damit vor der öffentlichen Freigabe noch geprüft werden kann):
+
+- **Windows** (`windows-latest`): MSI-Installer, NSIS-Setup (`.exe`) über Tauris `"targets": "all"` in `tauri.conf.json`, zusätzlich ein zusammengestelltes **portables ZIP** der rohen `.exe` als eigener Workflow-Schritt (`Compress-Archive` + `softprops/action-gh-release`).
+- **Linux** (`ubuntu-22.04`): `.deb` und `.AppImage`, inkl. der laut Tauri-v2-Doku nötigen Systempakete (`libwebkit2gtk-4.1-dev`, `libgtk-3-dev`, `libappindicator3-dev`, `librsvg2-dev`, `patchelf`, `build-essential`).
+- macOS ist (noch) nicht Teil der Matrix — bei Bedarf einfach `macos-latest` im `matrix.include` ergänzen.
+
+**Nicht verifiziert:** Der Workflow konnte in diesem Entwicklungs-Environment nicht ausgelöst werden (kein GitHub-Actions-Runner verfügbar) — YAML-Syntax wurde über `js-yaml` geprüft, die referenzierten Pfade (`Rework/package-lock.json`, `Rework/apps/desktop/src-tauri/tauri.conf.json`) existieren nachweislich, und der zugrunde liegende `cargo tauri build`-Schritt wurde lokal unter Windows erfolgreich getestet (s. o.) — der Linux-Build-Pfad selbst wurde aber nicht durchlaufen. Vor dem ersten echten Release also einmal mit `workflow_dispatch` gegenprüfen.
 
 ## Setup / lokal ausführen
 

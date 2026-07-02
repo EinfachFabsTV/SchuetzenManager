@@ -1,0 +1,70 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  build-tauri:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: "windows-latest"
+          - platform: "ubuntu-22.04"
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libappindicator3-dev librsvg2-dev patchelf build-essential
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+          cache-dependency-path: Rework/package-lock.json
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install npm dependencies
+        working-directory: Rework
+        run: npm ci
+
+      - name: Build and publish Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: Rework/apps/desktop
+          tagName: ${{ github.ref_name }}
+          releaseName: "SchützenManager ${{ github.ref_name }}"
+          releaseBody: |
+            Automatisch gebauter Release. Windows: MSI-Installer, NSIS-Setup (.exe) und ein portables ZIP. Linux: .deb und .AppImage.
+          releaseDraft: true
+          prerelease: false
+
+      - name: Zip portable Windows build
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: |
+          $dest = "SchuetzenManager-portable-windows-x64.zip"
+          Compress-Archive -Path "Rework/apps/desktop/src-tauri/target/release/*.exe" -DestinationPath $dest
+          echo "PORTABLE_ZIP=$dest" >> $env:GITHUB_ENV
+
+      - name: Upload portable Windows ZIP to release
+        if: matrix.platform == 'windows-latest'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          draft: true
+          files: ${{ env.PORTABLE_ZIP }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

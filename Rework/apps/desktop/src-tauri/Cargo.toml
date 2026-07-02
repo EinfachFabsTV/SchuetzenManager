@@ -1,10 +1,10 @@
 [package]
-name = "app"
+name = "schuetzenmanager"
 version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+description = "SchützenManager Desktop-Anwendung"
+authors = ["Fabian L."]
 license = ""
-repository = ""
+repository = "https://github.com/EinfachFabsTV/SchuetzenManager"
 edition = "2021"
 rust-version = "1.77.2"
 
