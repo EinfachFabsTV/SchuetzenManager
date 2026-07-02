@@ -1,6 +1,8 @@
+import { useState } from "react";
 import type { SeasonSummary } from "../types";
 import type { AuthUser } from "../api/client";
 import { theme } from "../theme";
+import { ChangePasswordForm } from "./ChangePasswordForm";
 
 type Props = {
   seasons: SeasonSummary[];
@@ -12,6 +14,8 @@ type Props = {
 };
 
 export function Sidebar({ seasons, selectedId, onSelect, onCreateClick, user, onLogout }: Props) {
+  const [showChangePassword, setShowChangePassword] = useState(false);
+
   return (
     <aside style={{ width: 220, background: theme.surface, padding: "20px 16px", flexShrink: 0, display: "flex", flexDirection: "column" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 24 }}>
@@ -62,14 +66,23 @@ export function Sidebar({ seasons, selectedId, onSelect, onCreateClick, user, on
       {user && (
         <div style={{ marginTop: "auto", paddingTop: 16, borderTop: `1px solid ${theme.border}` }}>
           <div style={{ fontSize: 12, color: theme.textMuted, marginBottom: 6 }}>{user.realName}</div>
-          <button
-            onClick={onLogout}
-            style={{ border: `1px solid ${theme.border}`, background: theme.surfaceAlt, color: theme.text, borderRadius: 6, padding: "4px 10px", fontSize: 12, cursor: "pointer" }}
-          >
-            Abmelden
-          </button>
+          <div style={{ display: "flex", gap: 6 }}>
+            <button
+              onClick={() => setShowChangePassword(true)}
+              style={{ border: `1px solid ${theme.border}`, background: theme.surfaceAlt, color: theme.text, borderRadius: 6, padding: "4px 10px", fontSize: 12, cursor: "pointer" }}
+            >
+              Passwort
+            </button>
+            <button
+              onClick={onLogout}
+              style={{ border: `1px solid ${theme.border}`, background: theme.surfaceAlt, color: theme.text, borderRadius: 6, padding: "4px 10px", fontSize: 12, cursor: "pointer" }}
+            >
+              Abmelden
+            </button>
+          </div>
         </div>
       )}
+      {showChangePassword && <ChangePasswordForm onClose={() => setShowChangePassword(false)} />}
     </aside>
   );
 }

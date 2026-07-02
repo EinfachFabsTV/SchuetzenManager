@@ -119,9 +119,9 @@ Funktionaler Nachbau des einzigen Aufrufs von `tools/SendMail.java` im Legacy-Co
 
 - `GET /users` (authentifiziert) — listet alle Nutzer (ohne Passwort-Hash).
 - `POST /users` (authentifiziert) — legt einen neuen Nutzer mit generiertem Einmal-Passwort an und verschickt es per Mail (`src/mail.ts`, nodemailer statt JavaMail; Config-Keys `mail.*` aus `config.properties` → `SMTP_*`/`MAIL_FROM`-Env-Variablen). Ist `SMTP_HOST` nicht gesetzt, wird nichts verschickt, sondern die fertige Nachricht geloggt (`jsonTransport`) — damit der komplette Code-Pfad auch ohne echten Mailserver testbar ist.
-- **Noch offen:** ein Endpunkt, mit dem Nutzer ihr Einmal-Passwort selbst ändern können (aktuell nur admin-seitig über direktes Neuanlegen möglich).
+- `POST /api/auth/change-password` (authentifiziert, `routes/auth.ts`) — Nutzer können ihr (z. B. per Mail erhaltenes Einmal-) Passwort selbst ändern: prüft das aktuelle Passwort per `bcrypt.compare`, verlangt mindestens 8 Zeichen fürs neue. Frontend: `components/ChangePasswordForm.tsx`, als Overlay über `Sidebar.tsx`s "Passwort"-Button erreichbar.
 
-Verifiziert end-to-end mit `AUTH_ENABLED=true` (kein echter SMTP-Server im Entwicklungs-Environment verfügbar, daher über den JSON-Transport-Fallback geprüft): Nutzer ohne Token anlegen → `401`; mit Token → `201` plus geloggte Mail mit korrektem Empfänger/Betreff/generiertem Passwort; Login mit dem aus dem Mail-Log entnommenen Passwort → erfolgreich.
+Verifiziert end-to-end mit `AUTH_ENABLED=true` (kein echter SMTP-Server im Entwicklungs-Environment verfügbar, daher über den JSON-Transport-Fallback geprüft): Nutzer ohne Token anlegen → `401`; mit Token → `201` plus geloggte Mail mit korrektem Empfänger/Betreff/generiertem Passwort; Login mit dem aus dem Mail-Log entnommenen Passwort → erfolgreich. Passwort-Ändern zusätzlich per curl (falsches aktuelles Passwort → `401`, zu kurzes neues Passwort → `400`, korrekte Änderung → `200`, Login mit altem Passwort schlägt danach fehl, mit neuem funktioniert) und im Browser durchgespielt (Formular öffnen, ausfüllen, Erfolgsmeldung).
 
 ### Frontend (`Rework/apps/frontend`)
 

@@ -51,4 +51,29 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     const user = await prisma.user.findUnique({ where: { id: payload.sub } });
     return user ? { id: user.id, email: user.email, realName: user.realName } : null;
   });
+
+  // Lets a logged-in user replace their password (e.g. the one-time
+  // password mailed to them on account creation, see routes/users.ts) -
+  // previously the only way to change a password was for an admin to
+  // recreate the account from scratch.
+  app.post<{ Body: { currentPassword: string; newPassword: string } }>("/auth/change-password", async (request, reply) => {
+    const payload = getAuthenticatedUser(request);
+    if (!payload) {
+      reply.code(401);
+      return { error: "Nicht angemeldet." };
+    }
+    const { currentPassword, newPassword } = request.body;
+    if (!newPassword || newPassword.length < 8) {
+      reply.code(400);
+      return { error: "Das neue Passwort muss mindestens 8 Zeichen lang sein." };
+    }
+    const user = await prisma.user.findUnique({ where: { id: payload.sub } });
+    if (!user || !(await bcrypt.compare(currentPassword, user.password))) {
+      reply.code(401);
+      return { error: "Aktuelles Passwort ist falsch." };
+    }
+    const hash = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({ where: { id: user.id }, data: { password: hash } });
+    return { ok: true };
+  });
 };

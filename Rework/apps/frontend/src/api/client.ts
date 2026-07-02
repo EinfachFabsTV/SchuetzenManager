@@ -70,6 +70,8 @@ export const api = {
   registerFirstAdmin: (email: string, realName: string, password: string) =>
     request<AuthResponse>("/auth/register", { method: "POST", body: JSON.stringify({ email, realName, password }) }),
   getMe: () => request<AuthUser | null>("/auth/me"),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    request<{ ok: true }>("/auth/change-password", { method: "POST", body: JSON.stringify({ currentPassword, newPassword }) }),
 };
 
 export type ShootFormRow = {
