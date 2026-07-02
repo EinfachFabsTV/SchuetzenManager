@@ -87,7 +87,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             vault::vault_status,
             vault::vault_setup,
-            vault::vault_unlock
+            vault::vault_unlock,
+            vault::vault_change_password
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {

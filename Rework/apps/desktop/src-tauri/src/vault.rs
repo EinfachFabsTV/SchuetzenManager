@@ -394,6 +394,37 @@ pub fn vault_unlock(app: tauri::AppHandle, secret: String) -> Result<(), String>
     Ok(())
 }
 
+#[tauri::command]
+pub fn vault_change_password(app: tauri::AppHandle, current_secret: String, new_password: String) -> Result<(), String> {
+    let paths = resolve_vault_paths(&app)?;
+    if !paths.vault_json.exists() {
+        return Err("Kein Tresor eingerichtet.".to_string());
+    }
+    if new_password.chars().count() < 8 {
+        return Err("Das Passwort muss mindestens 8 Zeichen lang sein.".to_string());
+    }
+    let meta_json = fs::read_to_string(&paths.vault_json).map_err(|e| format!("could not read vault metadata: {e}"))?;
+    let mut meta: VaultMeta = serde_json::from_str(&meta_json).map_err(|e| format!("could not parse vault metadata: {e}"))?;
+
+    // Auto-detect against either wrap, same pattern as vault_unlock - a
+    // user who only remembers their recovery code can still set a new
+    // password without that being a security downgrade (either secret
+    // already grants full access).
+    let dek = unwrap_dek(&meta.password_wrap, &current_secret, &meta.kdf)
+        .or_else(|_| unwrap_dek(&meta.recovery_wrap, &current_secret, &meta.kdf))
+        .map_err(|_| "Falsches Passwort oder falscher Wiederherstellungscode.".to_string())?;
+
+    // Re-wrap the SAME DEK under the new password (fresh salt/nonce). The
+    // DEK never changes, so: the already-decrypted running database.db
+    // needs no re-encryption, db_nonce is untouched, and recovery_wrap /
+    // the recovery code keep working exactly as before.
+    meta.password_wrap = wrap_dek(&dek, &new_password, &meta.kdf)?;
+
+    let updated = serde_json::to_string_pretty(&meta).map_err(|e| format!("could not serialize vault metadata: {e}"))?;
+    fs::write(&paths.vault_json, updated).map_err(|e| format!("could not write vault metadata: {e}"))?;
+    Ok(())
+}
+
 /// Called from the RunEvent::Exit handler in lib.rs: re-encrypts the
 /// plaintext working copy and deletes it, so nothing sensitive remains on
 /// disk while the app isn't running. Best-effort - RunEvent::Exit can't
@@ -541,5 +572,41 @@ mod tests {
 
         assert_eq!(dek, via_password);
         assert_eq!(dek, via_recovery);
+    }
+
+    // The following two tests exercise vault_change_password's core
+    // re-wrap logic directly through wrap_dek/unwrap_dek (mirroring how
+    // vault_setup/vault_unlock themselves aren't unit-tested end-to-end,
+    // since the #[tauri::command] wrapper needs a real AppHandle).
+
+    #[test]
+    fn change_password_rewraps_dek_and_leaves_recovery_code_untouched() {
+        let dek = random_dek();
+        let params = fast_params();
+        let old_password = "altes-passwort-123";
+        let recovery_code = generate_recovery_code();
+
+        let old_password_wrap = wrap_dek(&dek, old_password, &params).unwrap();
+        let recovery_wrap = wrap_dek(&dek, &recovery_code, &params).unwrap();
+
+        // vault_change_password's core step: unwrap via the old secret,
+        // re-wrap the same DEK under the new one.
+        let recovered = unwrap_dek(&old_password_wrap, old_password, &params).unwrap();
+        assert_eq!(recovered, dek);
+        let new_password = "neues-passwort-456";
+        let new_password_wrap = wrap_dek(&recovered, new_password, &params).unwrap();
+
+        assert_eq!(unwrap_dek(&new_password_wrap, new_password, &params).unwrap(), dek);
+        assert!(unwrap_dek(&new_password_wrap, old_password, &params).is_err());
+        // Recovery wrap was never touched - still opens the same DEK.
+        assert_eq!(unwrap_dek(&recovery_wrap, &recovery_code, &params).unwrap(), dek);
+    }
+
+    #[test]
+    fn change_password_rejects_wrong_current_secret() {
+        let dek = random_dek();
+        let params = fast_params();
+        let password_wrap = wrap_dek(&dek, "richtig", &params).unwrap();
+        assert!(unwrap_dek(&password_wrap, "falsch", &params).is_err());
     }
 }

@@ -1,21 +1,19 @@
-import { useState } from "react";
 import type { SeasonSummary } from "../types";
 import type { AuthUser } from "../api/client";
 import { theme } from "../theme";
-import { ChangePasswordForm } from "./ChangePasswordForm";
 
 type Props = {
   seasons: SeasonSummary[];
   selectedId: number | null;
   onSelect: (id: number) => void;
   onCreateClick: () => void;
+  onSettingsClick: () => void;
+  isSettingsActive: boolean;
   user: AuthUser | null;
   onLogout: () => void;
 };
 
-export function Sidebar({ seasons, selectedId, onSelect, onCreateClick, user, onLogout }: Props) {
-  const [showChangePassword, setShowChangePassword] = useState(false);
-
+export function Sidebar({ seasons, selectedId, onSelect, onCreateClick, onSettingsClick, isSettingsActive, user, onLogout }: Props) {
   return (
     <aside style={{ width: 220, background: theme.surface, padding: "20px 16px", flexShrink: 0, display: "flex", flexDirection: "column" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 24 }}>
@@ -63,26 +61,35 @@ export function Sidebar({ seasons, selectedId, onSelect, onCreateClick, user, on
           {season.label} ({season.year})
         </button>
       ))}
+      <button
+        onClick={onSettingsClick}
+        style={{
+          display: "block",
+          width: "100%",
+          textAlign: "left",
+          padding: "8px 10px",
+          marginTop: 8,
+          borderRadius: 8,
+          border: "none",
+          cursor: "pointer",
+          background: isSettingsActive ? theme.greenLight : "transparent",
+          color: isSettingsActive ? theme.green : theme.text,
+          fontSize: 13,
+        }}
+      >
+        ⚙ Einstellungen
+      </button>
       {user && (
         <div style={{ marginTop: "auto", paddingTop: 16, borderTop: `1px solid ${theme.border}` }}>
           <div style={{ fontSize: 12, color: theme.textMuted, marginBottom: 6 }}>{user.realName}</div>
-          <div style={{ display: "flex", gap: 6 }}>
-            <button
-              onClick={() => setShowChangePassword(true)}
-              style={{ border: `1px solid ${theme.border}`, background: theme.surfaceAlt, color: theme.text, borderRadius: 6, padding: "4px 10px", fontSize: 12, cursor: "pointer" }}
-            >
-              Passwort
-            </button>
-            <button
-              onClick={onLogout}
-              style={{ border: `1px solid ${theme.border}`, background: theme.surfaceAlt, color: theme.text, borderRadius: 6, padding: "4px 10px", fontSize: 12, cursor: "pointer" }}
-            >
-              Abmelden
-            </button>
-          </div>
+          <button
+            onClick={onLogout}
+            style={{ border: `1px solid ${theme.border}`, background: theme.surfaceAlt, color: theme.text, borderRadius: 6, padding: "4px 10px", fontSize: 12, cursor: "pointer" }}
+          >
+            Abmelden
+          </button>
         </div>
       )}
-      {showChangePassword && <ChangePasswordForm onClose={() => setShowChangePassword(false)} />}
     </aside>
   );
 }

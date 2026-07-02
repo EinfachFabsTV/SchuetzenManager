@@ -241,6 +241,25 @@ Beim allerersten Start verlangt die Desktop-App jetzt ein Passwort, mit dem die 
 
 **Weiterhin nicht per echtem Crash (Task-Manager "Beenden") durchgespielt:** die Kombination aus Absturz + darauffolgender Neustart mit der jetzt zeitstempel-basierten Erholungslogik — die Logik ist in sich korrekt und durch die zweite Testrunde indirekt bestätigt (sie hat genau den Fall, für den sie gebaut wurde, real beobachtet und korrekt gehandhabt), ein expliziter Absturztest steht aber noch aus. Ebenso nicht gemessen: die tatsächliche Argon2id-Laufzeit auf echter Hardware.
 
+### Einstellungen-Seite
+
+Das frühe UI-Mockup zeigte eigene Sidebar-Punkte für "Mannschaften" und "Einstellungen", die nie tatsächlich gebaut wurden — Mannschaftspflege lebt inline im "Übersicht"-Tab, eine Einstellungen-Seite gab es gar nicht. Ergänzt: ein neuer, immer sichtbarer "⚙ Einstellungen"-Sidebar-Eintrag (`Sidebar.tsx`, `App.tsx`s neuer `View`-Zweig `"settings"`), der `components/SettingsPage.tsx` rendert mit bis zu drei unabhängig sichtbaren Abschnitten:
+
+- **Tresor-Passwort ändern** — nur innerhalb der Tauri-Desktop-App (`"__TAURI_INTERNALS__" in window`, derselbe Check wie in `VaultGate.tsx`). Neues Tauri-Command `vault_change_password` (`vault.rs`): entschlüsselt den DEK über das aktuelle Geheimnis (Passwort oder Wiederherstellungscode, gleiche Auto-Erkennung wie `vault_unlock`), wrappt denselben DEK unter dem neuen Passwort neu (`wrap_dek`) und schreibt nur `password_wrap` in `vault.json` zurück — `recovery_wrap`, `db_nonce` und die laufende entschlüsselte `database.db` bleiben unangetastet, der Wiederherstellungscode bleibt gültig.
+- **Mein Account** — nur mit eingeloggtem `user` (zentrales Hosting). Das bisherige Web-Login-Passwort-Ändern (`ChangePasswordForm.tsx`) zog aus dem Sidebar-Overlay-Button hierher um; die Komponente bekam dafür eine `variant?: "modal" | "inline"`-Prop (Standard `"modal"` unverändert für Abwärtskompatibilität).
+- **Nutzerverwaltung** — nur mit eingeloggtem `user`. Erste echte Oberfläche für `routes/users.ts` (existierte bereits seit der Nutzerverwaltung+Mail-Arbeit, hatte aber nie ein Frontend): Liste per `GET /users`, Anlegen per `GET /users`+`POST /users` über zwei neue `api/client.ts`-Methoden (`getUsers`, `createUser`).
+
+**Verifiziert:**
+- `cargo test`: 8/8 Vault-Tests grün (2 neue: Passwort-Wechsel wrappt den DEK neu und lässt den Wiederherstellungscode unangetastet; falsches aktuelles Geheimnis wird abgelehnt).
+- `cargo build`: fehlerfrei.
+- `npm test --workspace apps/backend`: weiterhin alle 39 Tests unverändert grün (kein Backend-Code angefasst).
+- `npm test --workspace apps/frontend`: 55 Tests grün (11 neue `SettingsPage.test.tsx`-Fälle, 1 neuer `ChangePasswordForm`-Inline-Varianten-Test, alle bisherigen unverändert).
+- `npm run lint`: keine neuen Findings.
+- `npm run build --workspace apps/frontend`: fehlerfrei (bestätigt, dass die erweiterte `View`-Union sauber durchtypisiert).
+- **Kompletter echter Durchlauf im Web-/Zentral-Hosting-Modus** (`AUTH_ENABLED=true`, lokaler Dev-Server, Playwright-artiges Steuern über die Preview-Tools statt Screenshots): Erst-Registrierung → Einstellungen öffnen → "Mein Account" und "Nutzerverwaltung" erscheinen korrekt (kein Tresor-Abschnitt, da kein `__TAURI_INTERNALS__` im Browser) → neuen Nutzer angelegt → erscheint sofort in der Liste, Mail-Log bestätigt den korrekten Empfänger/Betreff über den `jsonTransport`-Fallback → eigenes Passwort geändert → Erfolgsmeldung erscheint, kein "Schließen"-Button (korrekt für die Inline-Variante).
+
+**Nicht verifiziert:** der komplette Desktop-Kreislauf der Tresor-Passwort-Sektion (ändern → App neu starten → sowohl neues Passwort als auch unangetasteter Wiederherstellungscode entsperren weiterhin) — dieselbe bereits dokumentierte Einschränkung wie beim restlichen Tresor-Feature: nur ein echter, nicht durch das Automatisierungstool sandboxed gestarteter Durchlauf kann das abschließend zeigen.
+
 ### Releases: zwei getrennte Kanäle
 
 Desktop-App und Server/Docker-Image werden bewusst über zwei unabhängige Workflows mit unterschiedlichen Tag-Präfixen veröffentlicht, da zentrales Hosting rein optional ist — ein Desktop-Release soll kein Docker-Image erzwingen und umgekehrt.

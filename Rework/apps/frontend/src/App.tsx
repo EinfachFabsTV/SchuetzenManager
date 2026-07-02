@@ -6,9 +6,10 @@ import { CreateSeasonForm } from "./components/CreateSeasonForm";
 import { SeasonView } from "./components/SeasonView";
 import { LoginGate } from "./components/LoginGate";
 import { SplashScreen } from "./components/SplashScreen";
+import { SettingsPage } from "./components/SettingsPage";
 import { theme } from "./theme";
 
-type View = { kind: "empty" } | { kind: "create" } | { kind: "season"; id: number };
+type View = { kind: "empty" } | { kind: "create" } | { kind: "season"; id: number } | { kind: "settings" };
 
 export default function App() {
   const [seasons, setSeasons] = useState<SeasonSummary[]>([]);
@@ -34,6 +35,8 @@ export default function App() {
               selectedId={view.kind === "season" ? view.id : null}
               onSelect={(id) => setView({ kind: "season", id })}
               onCreateClick={() => setView({ kind: "create" })}
+              onSettingsClick={() => setView({ kind: "settings" })}
+              isSettingsActive={view.kind === "settings"}
               user={user}
               onLogout={onLogout}
             />
@@ -57,6 +60,7 @@ export default function App() {
                   }}
                 />
               )}
+              {view.kind === "settings" && <SettingsPage user={user} />}
             </main>
           </div>
         )}

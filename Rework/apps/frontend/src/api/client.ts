@@ -76,6 +76,9 @@ export const api = {
   getMe: () => request<AuthUser | null>("/auth/me"),
   changePassword: (currentPassword: string, newPassword: string) =>
     request<{ ok: true }>("/auth/change-password", { method: "POST", body: JSON.stringify({ currentPassword, newPassword }) }),
+  getUsers: () => request<AuthUser[]>("/users"),
+  createUser: (email: string, realName: string) =>
+    request<AuthUser>("/users", { method: "POST", body: JSON.stringify({ email, realName }) }),
 };
 
 export type ShootFormRow = {

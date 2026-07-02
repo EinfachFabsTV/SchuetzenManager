@@ -60,4 +60,17 @@ describe("ChangePasswordForm", () => {
     fireEvent.click(backdrop);
     expect(onClose).toHaveBeenCalled();
   });
+
+  it("inline variant renders without a backdrop and without a cancel button", () => {
+    const { container } = render(<ChangePasswordForm onClose={vi.fn()} variant="inline" />);
+
+    expect(screen.getByRole("heading", { name: "Passwort ändern" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Abbrechen" })).not.toBeInTheDocument();
+    // No fixed-position backdrop element anywhere (the modal variant's
+    // distinguishing wrapper style).
+    const fixedElements = Array.from(container.querySelectorAll<HTMLElement>("*")).filter(
+      (el) => el.style.position === "fixed",
+    );
+    expect(fixedElements).toHaveLength(0);
+  });
 });
