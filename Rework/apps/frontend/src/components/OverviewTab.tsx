@@ -86,7 +86,7 @@ export function OverviewTab({ season, onTeamUpdated }: { season: SeasonDetail; o
               <td style={{ padding: "6px 8px" }}>
                 <button
                   onClick={() => setEditingTeamId(team.id)}
-                  style={{ border: `1px solid ${theme.border}`, background: "#fff", borderRadius: 6, padding: "4px 10px", fontSize: 12, cursor: "pointer" }}
+                  style={{ border: `1px solid ${theme.border}`, background: theme.surfaceAlt, color: theme.text, borderRadius: 6, padding: "4px 10px", fontSize: 12, cursor: "pointer" }}
                 >
                   Bearbeiten
                 </button>

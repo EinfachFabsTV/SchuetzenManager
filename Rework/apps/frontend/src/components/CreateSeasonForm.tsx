@@ -14,6 +14,8 @@ const inputStyle: React.CSSProperties = {
   border: `1px solid ${theme.border}`,
   borderRadius: 6,
   fontSize: 13,
+  background: theme.surfaceAlt,
+  color: theme.text,
 };
 
 export function CreateSeasonForm({ onCreated, onCancel }: Props) {
@@ -101,7 +103,8 @@ export function CreateSeasonForm({ onCreated, onCancel }: Props) {
         style={{
           marginBottom: 20,
           border: `1px solid ${theme.border}`,
-          background: "#fff",
+          background: theme.surfaceAlt,
+          color: theme.text,
           borderRadius: 6,
           padding: "6px 12px",
           fontSize: 12,
@@ -117,14 +120,14 @@ export function CreateSeasonForm({ onCreated, onCancel }: Props) {
         <button
           type="button"
           onClick={onCancel}
-          style={{ border: `1px solid ${theme.border}`, background: "#fff", borderRadius: 6, padding: "8px 16px", cursor: "pointer" }}
+          style={{ border: `1px solid ${theme.border}`, background: theme.surfaceAlt, color: theme.text, borderRadius: 6, padding: "8px 16px", cursor: "pointer" }}
         >
           Abbrechen
         </button>
         <button
           type="submit"
           disabled={saving}
-          style={{ border: "none", background: theme.green, color: "#fff", borderRadius: 6, padding: "8px 16px", cursor: "pointer" }}
+          style={{ border: "none", background: theme.green, color: theme.onAccent, borderRadius: 6, padding: "8px 16px", cursor: "pointer" }}
         >
           {saving ? "Erstelle Spielplan…" : "Erstellen"}
         </button>

@@ -43,7 +43,7 @@ export function PdfExportButton({ seasonId, seasonLabel }: { seasonId: number; s
     <div style={{ position: "relative" }}>
       <button
         onClick={() => setOpen((o) => !o)}
-        style={{ border: `1px solid ${theme.border}`, background: "#fff", borderRadius: 6, padding: "6px 12px", fontSize: 13, cursor: "pointer" }}
+        style={{ border: `1px solid ${theme.border}`, background: theme.surfaceAlt, color: theme.text, borderRadius: 6, padding: "6px 12px", fontSize: 13, cursor: "pointer" }}
       >
         PDF exportieren
       </button>
@@ -53,7 +53,7 @@ export function PdfExportButton({ seasonId, seasonLabel }: { seasonId: number; s
             position: "absolute",
             right: 0,
             top: "calc(100% + 6px)",
-            background: "#fff",
+            background: theme.surface,
             border: `1px solid ${theme.border}`,
             borderRadius: 8,
             padding: 16,
@@ -75,7 +75,7 @@ export function PdfExportButton({ seasonId, seasonLabel }: { seasonId: number; s
           <button
             onClick={handleDownload}
             disabled={loading}
-            style={{ width: "100%", border: "none", background: theme.green, color: "#fff", borderRadius: 6, padding: "8px 0", cursor: "pointer", fontSize: 13 }}
+            style={{ width: "100%", border: "none", background: theme.green, color: theme.onAccent, borderRadius: 6, padding: "8px 0", cursor: "pointer", fontSize: 13 }}
           >
             {loading ? "Erstellt PDF…" : "Herunterladen"}
           </button>

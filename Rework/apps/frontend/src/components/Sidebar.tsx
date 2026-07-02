@@ -13,7 +13,7 @@ type Props = {
 
 export function Sidebar({ seasons, selectedId, onSelect, onCreateClick, user, onLogout }: Props) {
   return (
-    <aside style={{ width: 220, background: theme.bg, padding: "20px 16px", flexShrink: 0, display: "flex", flexDirection: "column" }}>
+    <aside style={{ width: 220, background: theme.surface, padding: "20px 16px", flexShrink: 0, display: "flex", flexDirection: "column" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 24 }}>
         <img src="/logo.svg" alt="" width={32} height={32} />
         <strong style={{ color: theme.green, fontSize: 15 }}>SchützenManager</strong>
@@ -24,7 +24,7 @@ export function Sidebar({ seasons, selectedId, onSelect, onCreateClick, user, on
           width: "100%",
           marginBottom: 16,
           background: theme.green,
-          color: "#fff",
+          color: theme.onAccent,
           border: "none",
           borderRadius: 8,
           padding: "8px 0",
@@ -64,7 +64,7 @@ export function Sidebar({ seasons, selectedId, onSelect, onCreateClick, user, on
           <div style={{ fontSize: 12, color: theme.textMuted, marginBottom: 6 }}>{user.realName}</div>
           <button
             onClick={onLogout}
-            style={{ border: `1px solid ${theme.border}`, background: "#fff", borderRadius: 6, padding: "4px 10px", fontSize: 12, cursor: "pointer" }}
+            style={{ border: `1px solid ${theme.border}`, background: theme.surfaceAlt, color: theme.text, borderRadius: 6, padding: "4px 10px", fontSize: 12, cursor: "pointer" }}
           >
             Abmelden
           </button>

@@ -46,7 +46,15 @@ function ShootRows({ rows, onChange }: { rows: Row[]; onChange: (rows: Row[]) =>
   function update(i: number, patch: Partial<Row>) {
     onChange(rows.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
   }
-  const cell: React.CSSProperties = { height: 30, padding: "0 6px", border: `1px solid ${theme.border}`, borderRadius: 4, fontSize: 12 };
+  const cell: React.CSSProperties = {
+    height: 30,
+    padding: "0 6px",
+    border: `1px solid ${theme.border}`,
+    borderRadius: 4,
+    fontSize: 12,
+    background: theme.surfaceAlt,
+    color: theme.text,
+  };
   return (
     <div>
       <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1.3fr 1.2fr 0.8fr 0.8fr 0.8fr", gap: 6, fontSize: 11, color: theme.textMuted, marginBottom: 4 }}>
@@ -104,7 +112,7 @@ export function MatchForm({ match, onSaved, onCancel }: { match: Match; onSaved:
   }
 
   return (
-    <div style={{ background: "#fff", border: `1px solid ${theme.border}`, borderRadius: 12, padding: 20, maxWidth: 720 }}>
+    <div style={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 12, padding: 20, maxWidth: 720 }}>
       <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 10 }}>{match.homeTeam.name}</h3>
       <ShootRows rows={homeShoots} onChange={setHomeShoots} />
       <div style={{ fontSize: 12, fontWeight: 600, margin: "8px 0" }}>Zusätzliche Schützen/innen</div>
@@ -112,7 +120,7 @@ export function MatchForm({ match, onSaved, onCancel }: { match: Match; onSaved:
       <button
         type="button"
         onClick={() => setAdditionalHome((prev) => [...prev, emptyRow()])}
-        style={{ border: `1px solid ${theme.border}`, background: "#fff", borderRadius: 6, padding: "4px 10px", fontSize: 12, cursor: "pointer", marginBottom: 20 }}
+        style={{ border: `1px solid ${theme.border}`, background: theme.surfaceAlt, color: theme.text, borderRadius: 6, padding: "4px 10px", fontSize: 12, cursor: "pointer", marginBottom: 20 }}
       >
         +
       </button>
@@ -124,7 +132,7 @@ export function MatchForm({ match, onSaved, onCancel }: { match: Match; onSaved:
       <button
         type="button"
         onClick={() => setAdditionalGuest((prev) => [...prev, emptyRow()])}
-        style={{ border: `1px solid ${theme.border}`, background: "#fff", borderRadius: 6, padding: "4px 10px", fontSize: 12, cursor: "pointer", marginBottom: 20 }}
+        style={{ border: `1px solid ${theme.border}`, background: theme.surfaceAlt, color: theme.text, borderRadius: 6, padding: "4px 10px", fontSize: 12, cursor: "pointer", marginBottom: 20 }}
       >
         +
       </button>
@@ -135,7 +143,7 @@ export function MatchForm({ match, onSaved, onCancel }: { match: Match; onSaved:
         <button
           type="button"
           onClick={onCancel}
-          style={{ border: `1px solid ${theme.border}`, background: "#fff", borderRadius: 6, padding: "8px 16px", cursor: "pointer" }}
+          style={{ border: `1px solid ${theme.border}`, background: theme.surfaceAlt, color: theme.text, borderRadius: 6, padding: "8px 16px", cursor: "pointer" }}
         >
           Abbrechen
         </button>
@@ -143,7 +151,7 @@ export function MatchForm({ match, onSaved, onCancel }: { match: Match; onSaved:
           type="button"
           onClick={handleSave}
           disabled={saving}
-          style={{ border: "none", background: theme.green, color: "#fff", borderRadius: 6, padding: "8px 16px", cursor: "pointer" }}
+          style={{ border: "none", background: theme.green, color: theme.onAccent, borderRadius: 6, padding: "8px 16px", cursor: "pointer" }}
         >
           {saving ? "Speichert…" : "Speichern"}
         </button>

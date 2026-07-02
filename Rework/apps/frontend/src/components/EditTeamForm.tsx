@@ -10,6 +10,8 @@ const inputStyle: React.CSSProperties = {
   borderRadius: 6,
   fontSize: 13,
   width: "100%",
+  background: theme.surfaceAlt,
+  color: theme.text,
 };
 
 const field: React.CSSProperties = { display: "flex", flexDirection: "column", gap: 4, fontSize: 12, color: theme.textMuted };
@@ -41,7 +43,7 @@ export function EditTeamForm({ team, onSaved, onCancel }: { team: Team; onSaved:
   return (
     <form
       onSubmit={handleSave}
-      style={{ background: "#fff", border: `1px solid ${theme.border}`, borderRadius: 12, padding: 20, maxWidth: 480 }}
+      style={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 12, padding: 20, maxWidth: 480 }}
     >
       <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 16 }}>Mannschaft bearbeiten</h3>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
@@ -77,14 +79,14 @@ export function EditTeamForm({ team, onSaved, onCancel }: { team: Team; onSaved:
         <button
           type="button"
           onClick={onCancel}
-          style={{ border: `1px solid ${theme.border}`, background: "#fff", borderRadius: 6, padding: "8px 16px", cursor: "pointer" }}
+          style={{ border: `1px solid ${theme.border}`, background: theme.surfaceAlt, color: theme.text, borderRadius: 6, padding: "8px 16px", cursor: "pointer" }}
         >
           Abbrechen
         </button>
         <button
           type="submit"
           disabled={saving}
-          style={{ border: "none", background: theme.green, color: "#fff", borderRadius: 6, padding: "8px 16px", cursor: "pointer" }}
+          style={{ border: "none", background: theme.green, color: theme.onAccent, borderRadius: 6, padding: "8px 16px", cursor: "pointer" }}
         >
           {saving ? "Speichert…" : "Speichern"}
         </button>

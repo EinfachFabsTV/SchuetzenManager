@@ -10,6 +10,8 @@ const inputStyle: React.CSSProperties = {
   borderRadius: 6,
   fontSize: 14,
   width: "100%",
+  background: theme.surfaceAlt,
+  color: theme.text,
 };
 
 export function LoginForm({ onSuccess }: { onSuccess: (user: AuthUser) => void }) {
@@ -37,8 +39,8 @@ export function LoginForm({ onSuccess }: { onSuccess: (user: AuthUser) => void }
   }
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", alignItems: "center", justifyContent: "center", background: "#fff" }}>
-      <form onSubmit={handleSubmit} style={{ width: 320, border: `1px solid ${theme.border}`, borderRadius: 12, padding: 24 }}>
+    <div style={{ display: "flex", minHeight: "100vh", alignItems: "center", justifyContent: "center", background: theme.bg, color: theme.text }}>
+      <form onSubmit={handleSubmit} style={{ width: 320, background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 12, padding: 24 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
           <img src="/logo.svg" alt="" width={32} height={32} />
           <strong style={{ color: theme.green, fontSize: 15 }}>SchützenManager</strong>
@@ -70,7 +72,7 @@ export function LoginForm({ onSuccess }: { onSuccess: (user: AuthUser) => void }
         <button
           type="submit"
           disabled={loading}
-          style={{ width: "100%", border: "none", background: theme.green, color: "#fff", borderRadius: 6, padding: "10px 0", cursor: "pointer", fontSize: 14, marginBottom: 12 }}
+          style={{ width: "100%", border: "none", background: theme.green, color: theme.onAccent, borderRadius: 6, padding: "10px 0", cursor: "pointer", fontSize: 14, marginBottom: 12 }}
         >
           {loading ? "Bitte warten…" : mode === "login" ? "Anmelden" : "Account anlegen"}
         </button>

@@ -48,7 +48,8 @@ export function MatchesTab({ season, onMatchSaved }: { season: SeasonDetail; onM
                 marginBottom: 6,
                 border: `1px solid ${theme.border}`,
                 borderRadius: 8,
-                background: "#fff",
+                background: theme.surface,
+                color: theme.text,
                 cursor: "pointer",
                 fontSize: 13,
               }}
