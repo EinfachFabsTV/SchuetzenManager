@@ -193,6 +193,32 @@ Die gebaute App startet den Fastify-Backend-Prozess jetzt automatisch als Kindpr
 - Ein **hartes Beenden** des Hauptprozesses (Absturz, Task-Manager "Beenden", oder in diesem Test ein `taskkill`) löst `RunEvent::Exit` nicht aus, wodurch der Sidecar als verwaister Prozess weiterläuft und den Port belegt hält, bis er manuell beendet wird. Ein normales Schließen des Fensters über die UI durchläuft Tauris regulären Event-Loop und räumt korrekt auf — das ist der Pfad, den echte Nutzer verwenden, aber die Absturz-Lücke ist nicht abgesichert (z. B. über einen zusätzlichen Signal-Handler).
 - Die gestagten `node_modules` werden unkomprimiert kopiert (keine Größenoptimierung); das NSIS-Setup landet dadurch bei ~36 MB.
 
+### Erststart-Tresor: Passwort + Wiederherstellungscode, lokale Verschlüsselung
+
+Beim allerersten Start verlangt die Desktop-App jetzt ein Passwort, mit dem die lokale `database.db` verschlüsselt wird, sowie einen einmalig angezeigten Wiederherstellungscode als Backup-Zugang. Betrifft ausschließlich die Desktop-App — das bestehende Web-Login fürs zentrale Hosting (`AUTH_ENABLED`/JWT, siehe oben) ist ein komplett getrenntes System und unverändert.
+
+**Warum nicht einfach SQLCipher:** Prismas SQLite-Treiber (eine eigene Rust-Query-Engine) kann keine SQLCipher-verschlüsselten Dateien öffnen — es gibt keinen Weg, Prisma transparent auf einer verschlüsselten Datei arbeiten zu lassen, ohne die Query-Engine selbst zu ersetzen. Stattdessen macht `src-tauri/src/vault.rs` **Envelope-Verschlüsselung der kompletten Datei**, komplett im Tauri/Rust-Prozess, bevor der Node-Sidecar (und damit Prisma) überhaupt gestartet wird — Fastify, Prisma, `db.ts`, `app.ts` und alle 39 Backend-Tests bleiben dadurch unangetastet.
+
+- Ein zufälliger 256-Bit Data Encryption Key (DEK) verschlüsselt die komplette SQLite-Datei mit AES-256-GCM.
+- Der DEK wird zweimal unabhängig voneinander unter Argon2id-abgeleiteten Key-Encryption-Keys gewrappt: einmal vom Passwort, einmal vom generierten Wiederherstellungscode. Beide Geheimnisse können den DEK allein entschlüsseln (gleiches Prinzip wie BitLocker/LUKS-Recipient-Encryption).
+- Auf der Platte (`app_data_dir()`): `vault.json` (nur Metadaten — Argon2-Parameter, Salts, gewrappte DEKs, DB-Nonce — nie ein Klartext-Geheimnis), `database.db.enc` (Chiffrat, liegt vor, solange die App nicht läuft), `database.db` (Klartext-Arbeitskopie, existiert nur während die App entsperrt/aktiv ist).
+- Wiederherstellungscode: 20 Zufallsbytes, Crockford-Base32 (schließt I/L/O/U aus), in 8 Vierergruppen formatiert (`XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX`, 160 Bit Entropie).
+- Argon2id-Parameter: m=19 MiB, t=2, p=1 (RFC-9106-Baseline) — die tatsächliche Laufzeit auf echter Hardware wurde **nicht** gemessen (siehe Verifikationslücke unten); bei Bedarf über `ARGON2_MEM_KIB` in `vault.rs` nachjustieren.
+- `vault_unlock` probiert das eingegebene Geheimnis automatisch erst als Passwort, dann als Wiederherstellungscode (ein Eingabefeld statt Modus-Umschalter).
+- **Crash-Erholung:** Existiert beim Entsperren bereits eine Klartext-`database.db` (App wurde zuvor hart beendet statt sauber geschlossen), ist sie aktueller als das zuletzt beim letzten sauberen Beenden geschriebene `database.db.enc` (Prisma/SQLite schreibt während der Laufzeit direkt in die Klartextdatei). `vault_unlock` erkennt das und nutzt die vorhandene Datei direkt weiter, statt sie mit dem veralteten Chiffrat zu überschreiben — sonst würde ein Absturz Daten aus der abgestürzten Sitzung stillschweigend zurückrollen.
+- `RunEvent::Exit` verschlüsselt die Klartextkopie zurück und löscht sie (best effort, da Exit-Handler keine Fehler propagieren können) — greift dieselbe bereits dokumentierte Einschränkung wie oben beim Sidecar: ein hartes Beenden (Task-Manager, Stromausfall) löst `RunEvent::Exit` nicht aus und hinterlässt die Klartextdatei, bis die Crash-Erholung beim nächsten Start greift.
+
+**Verifiziert:**
+- `cargo test` in `src-tauri`: 6/6 neue `vault::tests`-Fälle grün (Wrap/Unwrap-Round-Trip inkl. falschem Geheimnis, Datei-Verschlüsselung/-Entschlüsselung inkl. falschem DEK, Format des Wiederherstellungscodes, dass Passwort UND Wiederherstellungscode denselben DEK entschlüsseln).
+- `cargo build`: fehlerfrei, keine Warnungen.
+- `npm test --workspace apps/backend` nach der Änderung erneut ausgeführt: weiterhin alle 39 Tests grün und unverändert — bestätigt, dass `db.ts`/`app.ts` tatsächlich nicht angefasst wurden.
+- `npm test --workspace apps/frontend`: 8 neue `VaultGate.test.tsx`-Fälle grün, alle 35 bestehenden Frontend-Tests unverändert grün (43 gesamt).
+- `npm run lint` (ESLint-Workspace): keine neuen Findings.
+- `npm run build --workspace apps/desktop`: vollständiger Release-Build inkl. NSIS-Installer erfolgreich.
+- Die neue exe wurde gestartet; der Sidecar startet jetzt nachweislich **nicht** mehr sofort (vorher startete er unconditional in `setup()`): Port 3001 blieb nach dem Start mehrere Sekunden geschlossen (`Test-NetConnection` → `TcpTestSucceeded: False`), und `app_data_dir()` wurde zwar angelegt (bestätigt, dass `vault_status` fehlerfrei lief), enthielt aber weder `vault.json` noch `database.db` — konsistent mit einer App, die korrekt auf dem Passwort-Screen wartet, statt vorzeitig oder fehlerhaft etwas anzulegen.
+
+**Nicht verifiziert:** der eigentliche interaktive Durchlauf durch die UI (Passwort setzen → Wiederherstellungscode anzeigen/bestätigen → App entsperrt sich → Neustart zeigt den Entsperren-Screen → falsches Passwort wird abgelehnt → Wiederherstellungscode entsperrt ebenfalls → Crash-Test). Die verfügbaren GUI-Automatisierungswerkzeuge in diesem Environment erkennen nur regulär unter Windows installierte/registrierte Anwendungen; der unpaketierte Build wird nicht erkannt, und eine dauerhafte Installation des gebauten NSIS-Pakets nur zu Testzwecken wurde bewusst nicht ohne explizite Rückfrage durchgeführt (das automatische Berechtigungssystem hat einen entsprechenden Versuch korrekt blockiert). Die tatsächliche Argon2id-Laufzeit auf echter Hardware wurde aus demselben Grund nicht gemessen. Empfehlung: manueller Test durch den Nutzer, oder Freigabe für eine testweise Installation in einer zukünftigen Sitzung.
+
 ### Releases: zwei getrennte Kanäle
 
 Desktop-App und Server/Docker-Image werden bewusst über zwei unabhängige Workflows mit unterschiedlichen Tag-Präfixen veröffentlicht, da zentrales Hosting rein optional ist — ein Desktop-Release soll kein Docker-Image erzwingen und umgekehrt.

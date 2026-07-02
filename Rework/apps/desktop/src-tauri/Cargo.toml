@@ -24,3 +24,8 @@ log = "0.4"
 tauri = { version = "2.11.3", features = [] }
 tauri-plugin-log = "2"
 tauri-plugin-shell = "2.3.5"
+argon2 = "0.5.3"
+aes-gcm = "0.10.3"
+rand = "0.8.6"
+data-encoding = "2.6.0"
+zeroize = { version = "1.8", features = ["derive"] }
