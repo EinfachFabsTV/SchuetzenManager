@@ -14,6 +14,16 @@
   <rect x="24" y="140" width="172" height="30" rx="8" fill="#33473c"/>
   <text x="36" y="159" font-size="12" fill="#5aa17d">L.G. Auflage A (2026)</text>
 
+  <text x="30" y="204" font-size="10" fill="#a3a59a">SAISON 2026 · L.G. AUFLAGE A</text>
+  <rect x="24" y="216" width="172" height="28" rx="6" fill="#33473c"/>
+  <text x="38" y="234" font-size="12" fill="#5aa17d">Übersicht</text>
+  <text x="38" y="270" font-size="12" fill="#e9ebe4">Mannschaften</text>
+  <text x="38" y="300" font-size="12" fill="#e9ebe4">Wettkämpfe</text>
+  <text x="38" y="330" font-size="12" fill="#e9ebe4">Schützen/innen</text>
+  <text x="38" y="360" font-size="12" fill="#e9ebe4">PDF-Export</text>
+  <line x1="24" y1="382" x2="196" y2="382" stroke="#4a4c45"/>
+  <text x="38" y="406" font-size="12" fill="#a3a59a">Einstellungen</text>
+
   <text x="248" y="56" font-size="20" font-weight="600" fill="#e9ebe4">Saison 2026 · L.G. Auflage A</text>
 
   <text x="248" y="94" font-size="13" fill="#e9ebe4">Übersicht</text>
