@@ -51,7 +51,7 @@ Ursprünglich entwickelt von **Christian Kater** als Java-8/JavaFX-Desktop-Proje
 |---|---|
 | **Legacy** (Java/JavaFX) | funktionsfähig, unverändert in [Legacy/](Legacy/) |
 | **Rework — Backend** (Fastify + Prisma) | Saison anlegen (inkl. Spielplan), Ergebniserfassung, Tabelle, Einzelwertung, Mannschaftspflege, PDF-Export, Nutzerverwaltung + Mail-Versand, Migrationsskript für `database.db` — alles verifiziert, 39 automatisierte Tests |
-| **Rework — Frontend** (React + Vite) | Saisonliste, Saison-Erstellung, Ergebniserfassung, Tabelle/Einzelwertung, Mannschaftsverwaltung, PDF-Export, Login — einheitliches dunkles Theme, 24 automatisierte Tests |
+| **Rework — Frontend** (React + Vite) | Saisonliste, Saison-Erstellung, Ergebniserfassung, Tabelle/Einzelwertung, Mannschaftsverwaltung, PDF-Export, Login — einheitliches dunkles Theme, 35 automatisierte Tests |
 | **Desktop-Hülle** (Tauri) | baut erfolgreich zu `.exe` + NSIS-Installer; Backend startet automatisch als Sidecar-Prozess mit eigener Datenbank pro Nutzer — end-to-end inkl. Neustart-Persistenz getestet (nur unter Windows verifiziert) |
 | **Zentrales Hosting** (Docker + Postgres + Login) | Docker-Image, Postgres-Schema/-Migration und optionales Login stehen und sind (bis auf einen echten Docker-Lauf) getestet |
 
@@ -59,10 +59,10 @@ Details, offene Punkte und Testprotokolle zu jedem Punkt: [TECHNICAL.md](TECHNIC
 
 ## Tests
 
-63 automatisierte Tests, bei jedem Push/PR per [CI](.github/workflows/ci.yml) ausgeführt:
+74 automatisierte Tests, bei jedem Push/PR per [CI](.github/workflows/ci.yml) ausgeführt:
 
 - **Backend** (`npm test --workspace apps/backend`, 39 Tests): Domänenlogik (Spielplan-Generierung, Tabellen-/Einzelwertungsberechnung) sowie End-to-End-Tests aller HTTP-Routen gegen eine echte temporäre SQLite-Datenbank (Auth, Saison-/Match-/Mannschafts-CRUD, PDF-Export, Passwort ändern, Nutzerverwaltung inkl. Mail-Versand).
-- **Frontend** (`npm test --workspace apps/frontend`, 24 Tests): Vitest + React Testing Library, u. a. Regressionstest für den früher gefundenen DELETE-Content-Type-Bug sowie die Formularlogik von Saison-Erstellung, Passwort-ändern und Ergebniserfassung.
+- **Frontend** (`npm test --workspace apps/frontend`, 35 Tests): Vitest + React Testing Library, u. a. Regressionstest für den früher gefundenen DELETE-Content-Type-Bug, die Formularlogik von Saison-Erstellung/Passwort-ändern/Ergebniserfassung/Mannschaftspflege sowie die Login-Gate-Logik (abgelaufene Token, deaktivierte Auth).
 
 ## Download
 
