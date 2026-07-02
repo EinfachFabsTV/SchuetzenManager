@@ -11,9 +11,17 @@ export function setToken(token: string | null) {
   else localStorage.removeItem(TOKEN_KEY);
 }
 
+// Relative "/api" works when the backend serves the frontend itself
+// (Vite dev proxy, or the same-origin Docker/hosted deployment - see
+// server.ts). Inside the Tauri desktop app, the frontend is loaded from
+// Tauri's own webview origin, not from the backend's HTTP server, so
+// requests have to target the sidecar backend explicitly instead -
+// see TECHNICAL.md's "Tauri-Sidecar" section for why.
+const API_BASE = "__TAURI_INTERNALS__" in window ? "http://localhost:3001/api" : "/api";
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const token = getToken();
-  const res = await fetch(`/api${path}`, {
+  const res = await fetch(`${API_BASE}${path}`, {
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),

@@ -38,6 +38,14 @@ jobs:
         working-directory: Rework
         run: npm ci
 
+      - name: Generate Prisma client (needed by prepare-sidecar)
+        working-directory: Rework/apps/backend
+        run: npm run prisma:generate
+
+      - name: Prepare backend sidecar (build, stage node_modules, bundle Node runtime)
+        working-directory: Rework/apps/desktop
+        run: npm run prepare-sidecar
+
       - name: Build and publish Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
@@ -55,8 +63,12 @@ jobs:
         if: matrix.platform == 'windows-latest'
         shell: pwsh
         run: |
+          # Needs the main exe, the bundled Node sidecar binary, and the
+          # resources/backend folder side by side - a portable build runs
+          # the sidecar exactly like the installed version does.
           $dest = "SchuetzenManager-portable-windows-x64.zip"
-          Compress-Archive -Path "Rework/apps/desktop/src-tauri/target/release/*.exe" -DestinationPath $dest
+          $releaseDir = "Rework/apps/desktop/src-tauri/target/release"
+          Compress-Archive -Path "$releaseDir/schuetzenmanager.exe", "$releaseDir/node-*.exe", "$releaseDir/resources" -DestinationPath $dest
           echo "PORTABLE_ZIP=$dest" >> $env:GITHUB_ENV
 
       - name: Upload portable Windows ZIP to release
