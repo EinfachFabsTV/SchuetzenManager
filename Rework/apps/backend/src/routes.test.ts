@@ -173,6 +173,53 @@ test("changing the password works and the old password stops logging in", async 
   assert.equal(newLogin.statusCode, 200);
 });
 
+test("creating a user is blocked without a token", async () => {
+  const res = await app.inject({
+    method: "POST",
+    url: "/api/users",
+    payload: { email: "member@example.com", realName: "Vereinsmitglied" },
+  });
+  assert.equal(res.statusCode, 401);
+});
+
+test("creating a user generates a password, mails it (jsonTransport, no SMTP configured), and never returns the hash", async () => {
+  const res = await app.inject({
+    method: "POST",
+    url: "/api/users",
+    headers: { authorization: `Bearer ${token}` },
+    payload: { email: "member@example.com", realName: "Vereinsmitglied" },
+  });
+  assert.equal(res.statusCode, 201);
+  const body = res.json();
+  assert.equal(body.email, "member@example.com");
+  assert.equal(body.password, undefined);
+
+  const user = await prisma.user.findUnique({ where: { email: "member@example.com" } });
+  assert.ok(user);
+  assert.notEqual(user.password, "");
+});
+
+test("creating a user with an already-registered email is rejected", async () => {
+  const res = await app.inject({
+    method: "POST",
+    url: "/api/users",
+    headers: { authorization: `Bearer ${token}` },
+    payload: { email: "member@example.com", realName: "Zweiter Versuch" },
+  });
+  assert.equal(res.statusCode, 409);
+});
+
+test("listing users requires a token and never exposes password hashes", async () => {
+  const unauth = await app.inject({ method: "GET", url: "/api/users" });
+  assert.equal(unauth.statusCode, 401);
+
+  const res = await app.inject({ method: "GET", url: "/api/users", headers: { authorization: `Bearer ${token}` } });
+  assert.equal(res.statusCode, 200);
+  const users = res.json();
+  assert.ok(users.some((u: { email: string }) => u.email === "member@example.com"));
+  assert.ok(users.every((u: Record<string, unknown>) => !("password" in u)));
+});
+
 test("deleting the season removes it (DELETE without a body must not 400)", async () => {
   const res = await app.inject({
     method: "DELETE",
