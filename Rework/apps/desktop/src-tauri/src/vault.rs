@@ -286,7 +286,14 @@ pub fn vault_setup(app: tauri::AppHandle, password: String) -> Result<String, St
     // from the pre-migrated template shipped with the app.
     if !paths.plain_db.exists() {
         let template_db = crate::resolve_template_db()?;
-        fs::copy(&template_db, &paths.plain_db).map_err(|e| format!("could not seed database from template: {e}"))?;
+        fs::copy(&template_db, &paths.plain_db).map_err(|e| {
+            format!(
+                "could not seed database from template ({} -> {}, exists={}): {e}",
+                template_db.display(),
+                paths.plain_db.display(),
+                template_db.exists()
+            )
+        })?;
     }
 
     let db_nonce = encrypt_file(&dek, &paths.plain_db, &paths.enc_db)?;
