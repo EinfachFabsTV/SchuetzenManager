@@ -38,7 +38,7 @@ Ursprünglich entwickelt von **Christian Kater** als Java-8/JavaFX-Desktop-Proje
 | Legacy (Java/JavaFX) | funktionsfähig, unverändert in [Legacy/](Legacy/) |
 | Rework — Backend (Fastify + Prisma) | Saison anlegen (inkl. automatischem Spielplan), Ergebniserfassung, Tabelle, Einzelwertung, Mannschaft bearbeiten, PDF-Export, Nutzerverwaltung + Mail-Versand, Migrationsskript für `database.db` — alles verifiziert |
 | Rework — Frontend (React + Vite) | **Phase 1 + 2 komplett**: Saisonliste, Saison-Erstellung, Ergebniserfassung, Tabelle/Einzelwertung, Mannschaftsverwaltung, PDF-Export, Login |
-| Rework — Desktop-Hülle (Tauri) | Rust-Toolchain + Visual Studio Build Tools installiert, Scaffolding in Arbeit |
+| Rework — Desktop-Hülle (Tauri) | Gescaffoldet, baut erfolgreich (inkl. Windows-Installer als MSI/NSIS), App startet — Backend läuft noch nicht automatisch mit (kein Sidecar, siehe [TECHNICAL.md](TECHNICAL.md)) |
 | Zentrales Hosting (Docker + Postgres + Login) | Docker-Image, Postgres-Schema/-Migration und Login (opt-in per `AUTH_ENABLED`, öffentliche Lese-Ansicht bleibt erhalten) stehen und sind end-to-end getestet; echter `docker`-Lauf und Migration gegen eine laufende Postgres-Instanz noch nicht getestet (Details in [TECHNICAL.md](TECHNICAL.md)) |
 
 ## Lizenz / Copyright

@@ -117,17 +117,14 @@ Verifiziert end-to-end mit `AUTH_ENABLED=true` (kein echter SMTP-Server im Entwi
 - `components/LoginGate.tsx` + `LoginForm.tsx`: fragt `GET /api/auth/status` ab; ist Auth deaktiviert, wird die App direkt gerendert (kein UI-Unterschied zum bisherigen Verhalten); ist sie aktiviert, blockiert ein Login-/Erst-Registrierungs-Screen, bis ein gültiges JWT vorliegt (in `localStorage` persistiert, an `api/client.ts`s `request()` als `Authorization`-Header angehängt).
 - End-to-end manuell durchgetestet: Saison mit 2 Mannschaften angelegt (Spielplan → 2 Wochen), Ergebnis für ein Match erfasst, Tabelle/Einzelwertung aktualisierten sich korrekt ohne Reload.
 
-### Desktop-Hülle (Tauri) — noch offen
+### Desktop-Hülle (Tauri) — `Rework/apps/desktop`
 
-Noch nicht gescaffoldet, weil im Entwicklungs-Environment kein Rust/Cargo installiert war. Vorgehen, sobald verfügbar:
+Rust/Cargo (via `rustup`) und die Visual Studio Build Tools (MSVC C++-Toolchain, für den Windows-Linker nötig) wurden nachträglich installiert; das Projekt wurde mit `cargo tauri init` gescaffoldet (`src-tauri/`) und das Icon-Set aus [assets/logo/icon.svg](assets/logo/icon.svg) generiert (`cargo tauri icon`, iOS/Android-Varianten wieder entfernt, da nur Desktop-Targets relevant sind).
 
-```bash
-rustup-init   # Rust-Toolchain installieren
-cd Rework/apps
-npm create tauri-app@latest desktop -- --template react-ts
-```
-
-Der Tauri-Prozess soll den Fastify-Server lokal als Sidecar starten und die Vite-Build-Ausgabe des Frontends laden.
+- `tauri.conf.json`: `frontendDist` zeigt auf `apps/frontend/dist`, `devUrl` auf den Vite-Dev-Server; `beforeDevCommand`/`beforeBuildCommand` wechseln ins Rework-Root und bauen/starten das Frontend über die npm-Workspace-Scripts. **Wichtig:** Beide Pfade sind relativ zu `apps/desktop` (dem Verzeichnis, das `src-tauri` enthält), nicht relativ zu `src-tauri` selbst — hat beim ersten Anlauf zu zwei falschen Pfad-Iterationen geführt, bevor es passte.
+- `package.json` im Desktop-Workspace nutzt `@tauri-apps/cli` (npm), sodass kein global installiertes `cargo tauri` nötig ist — nur die Rust-Toolchain selbst.
+- **Verifiziert:** `npm run build --workspace apps/desktop` (→ `cargo tauri build --debug`) kompiliert erfolgreich durch und erzeugt `app.exe` sowie eine MSI- und eine NSIS-Installer-Datei unter `src-tauri/target/debug/bundle/`. Die `app.exe` wurde gestartet und lief stabil als eigener Prozess (WebView2-Fenster).
+- **Bekannte Lücke:** Die gebaute App lädt aktuell nur das statische Frontend, ohne den Fastify-Backend-Prozess automatisch mitzustarten (kein Sidecar). `/api`-Aufrufe schlagen daher in der gebauten App fehl, solange kein Backend separat läuft. Nächster Schritt: den kompilierten Backend-Build als [Tauri-Sidecar](https://tauri.app/develop/sidecar/) einbinden (Node selbst lässt sich nicht direkt in eine Rust-Binary einbetten — Optionen sind ein gebündelter Node-Runtime-Sidecar oder eine Kompilierung des Backends zu einem eigenständigen Executable, z. B. via `pkg`/`node --experimental-sea-config`).
 
 ## Setup / lokal ausführen
 
