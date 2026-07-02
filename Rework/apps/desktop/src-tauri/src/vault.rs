@@ -308,16 +308,22 @@ pub fn vault_setup(app: tauri::AppHandle, password: String) -> Result<String, St
     let meta_json = serde_json::to_string_pretty(&meta).map_err(|e| format!("could not serialize vault metadata: {e}"))?;
     fs::write(&paths.vault_json, meta_json).map_err(|e| format!("could not write vault metadata: {e}"))?;
 
-    let child = crate::start_backend_sidecar(&app, &paths.plain_db)?;
-    app.state::<crate::SidecarState>().0.lock().unwrap().replace(child);
-    wait_for_port(BACKEND_PORT, Duration::from_secs(5))?;
-
+    // Register the DEK/paths before attempting to spawn the sidecar: the
+    // plaintext database.db is already sitting on disk at this point
+    // (freshly seeded and encrypted above), so even if the sidecar spawn
+    // below fails for any reason, RunEvent::Exit still knows how to
+    // re-encrypt and clean it up instead of leaving it as plaintext
+    // indefinitely with no DEK on record.
     app.state::<VaultState>().0.lock().unwrap().replace(VaultUnlocked {
         dek,
-        plain_db_path: paths.plain_db,
+        plain_db_path: paths.plain_db.clone(),
         enc_db_path: paths.enc_db,
         vault_json_path: paths.vault_json,
     });
+
+    let child = crate::start_backend_sidecar(&app, &paths.plain_db)?;
+    app.state::<crate::SidecarState>().0.lock().unwrap().replace(child);
+    wait_for_port(BACKEND_PORT, Duration::from_secs(5))?;
 
     Ok(recovery_code)
 }
@@ -333,14 +339,33 @@ pub fn vault_unlock(app: tauri::AppHandle, secret: String) -> Result<(), String>
 
     let wrong_secret_err = || "Falsches Passwort oder falscher Wiederherstellungscode.".to_string();
 
-    let dek = if paths.plain_db.exists() {
-        // The app was previously killed rather than closed cleanly: the
-        // leftover plaintext copy reflects writes made during that crashed
-        // session and is therefore *newer* than database.db.enc (which
-        // was last written on the previous *clean* exit). Trust it
-        // instead of overwriting it with the stale ciphertext - we still
-        // need to recover the DEK (to re-encrypt correctly on the next
-        // clean exit), but skip decrypt_file entirely.
+    // A leftover plaintext copy only means "the app was killed rather than
+    // closed cleanly, trust it" if it's actually newer than the ciphertext.
+    // Comparing mere existence isn't enough: reencrypt_on_exit's delete can
+    // itself fail (observed in testing - the sidecar can still hold the
+    // file open for a moment after being killed), which would otherwise
+    // leave a *stale* plaintext file that this branch would wrongly prefer
+    // over a freshly-written, newer database.db.enc.
+    let plain_is_newer = match (fs::metadata(&paths.plain_db), fs::metadata(&paths.enc_db)) {
+        (Ok(plain_meta), Ok(enc_meta)) => match (plain_meta.modified(), enc_meta.modified()) {
+            (Ok(plain_time), Ok(enc_time)) => plain_time > enc_time,
+            // If we can't compare timestamps, fall back to the old
+            // existence-only behavior (still correct for a genuine crash,
+            // since there's no ciphertext-metadata-read failure in the
+            // normal case).
+            _ => true,
+        },
+        (Ok(_), Err(_)) => true, // enc_db missing entirely - only the plaintext can be right
+        _ => false,
+    };
+
+    let dek = if plain_is_newer {
+        // The app was previously killed rather than closed cleanly (or the
+        // last clean exit's delete-after-reencrypt failed): the leftover
+        // plaintext copy is newer than database.db.enc. Trust it instead
+        // of overwriting it with the older ciphertext - we still need to
+        // recover the DEK (to re-encrypt correctly on the next clean
+        // exit), but skip decrypt_file entirely.
         unwrap_dek(&meta.password_wrap, &secret, &meta.kdf)
             .or_else(|_| unwrap_dek(&meta.recovery_wrap, &secret, &meta.kdf))
             .map_err(|_| wrong_secret_err())?
@@ -352,16 +377,19 @@ pub fn vault_unlock(app: tauri::AppHandle, secret: String) -> Result<(), String>
         dek
     };
 
-    let child = crate::start_backend_sidecar(&app, &paths.plain_db)?;
-    app.state::<crate::SidecarState>().0.lock().unwrap().replace(child);
-    wait_for_port(BACKEND_PORT, Duration::from_secs(5))?;
-
+    // See the matching comment in vault_setup: register the DEK before
+    // attempting the sidecar spawn, so a spawn failure still leaves
+    // RunEvent::Exit able to re-encrypt and clean up the plaintext copy.
     app.state::<VaultState>().0.lock().unwrap().replace(VaultUnlocked {
         dek,
-        plain_db_path: paths.plain_db,
+        plain_db_path: paths.plain_db.clone(),
         enc_db_path: paths.enc_db,
         vault_json_path: paths.vault_json,
     });
+
+    let child = crate::start_backend_sidecar(&app, &paths.plain_db)?;
+    app.state::<crate::SidecarState>().0.lock().unwrap().replace(child);
+    wait_for_port(BACKEND_PORT, Duration::from_secs(5))?;
 
     Ok(())
 }
@@ -383,7 +411,30 @@ pub fn reencrypt_on_exit(state: &VaultState) {
             if let Err(e) = update_db_nonce(&unlocked.vault_json_path, &new_nonce) {
                 log::error!("Konnte Vault-Metadaten beim Beenden nicht aktualisieren: {e}");
             }
-            if let Err(e) = fs::remove_file(&unlocked.plain_db_path) {
+            // The sidecar's kill() (called just before this) only sends a
+            // termination signal - it doesn't wait for the process to
+            // actually exit, so it can still hold the plaintext file open
+            // for a brief moment (Windows won't delete a file that's still
+            // open by another process). Retry a few times instead of
+            // giving up on the first race: better than leaving the
+            // plaintext copy on disk indefinitely, which observed testing
+            // confirmed actually happens on a plain single-attempt delete.
+            let mut last_err = None;
+            for attempt in 0..10 {
+                match fs::remove_file(&unlocked.plain_db_path) {
+                    Ok(()) => {
+                        last_err = None;
+                        break;
+                    }
+                    Err(e) => {
+                        last_err = Some(e);
+                        if attempt < 9 {
+                            std::thread::sleep(Duration::from_millis(100));
+                        }
+                    }
+                }
+            }
+            if let Some(e) = last_err {
                 log::error!("Konnte entschlüsselte Datenbank beim Beenden nicht löschen: {e}");
             }
         }
