@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+          cache-dependency-path: Rework/package-lock.json
+
+      - name: Install dependencies
+        working-directory: Rework
+        run: npm ci
+
+      - name: Generate Prisma client
+        working-directory: Rework/apps/backend
+        run: npm run prisma:generate
+
+      - name: Backend type check
+        working-directory: Rework/apps/backend
+        run: npx tsc --noEmit -p tsconfig.json
+
+      - name: Backend domain tests
+        working-directory: Rework/apps/backend
+        run: npm test
+
+      - name: Frontend build (includes type check)
+        working-directory: Rework/apps/frontend
+        run: npm run build

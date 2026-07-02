@@ -91,13 +91,25 @@ Auth ist **opt-in** über die Umgebungsvariable `AUTH_ENABLED=true` — im lokal
 - `GET /api/auth/me` — validiert das JWT, liefert die aktuellen Nutzerdaten (für Session-Wiederherstellung nach Reload).
 - `requireAuth`-Hook (`src/auth.ts`) ist als `preHandler` auf die schreibenden Routen gesetzt (`POST /seasons`, `PUT /matches/:id`, `PUT /teams/:id`, `POST /users`) — alle `GET`-Routen bleiben immer öffentlich, das erfüllt die "Web-Ansicht für Mannschaften/Zuschauer"-Anforderung ohne eigenen Read-Only-Modus.
 - **Warum `jsonwebtoken` statt `@fastify/jwt`:** Die ursprünglich mit Fastify 4 kompatible Version `@fastify/jwt@8` zog `fast-jwt@4.x` nach sich, das mehrere kritische CVEs hatte (u.a. JWT-Auth-Bypass über leeres HMAC-Secret). `src/auth.ts` signiert/verifiziert JWTs stattdessen direkt mit dem gut gepflegten `jsonwebtoken`-Paket (liest den `Authorization: Bearer`-Header manuell) — das bleibt auch nach dem Fastify-5-Upgrade (siehe unten) unverändert, da es unabhängig von der Fastify-Version funktioniert.
+- **Vereinfachung:** Das `salt`-Feld aus dem Legacy-Schema bleibt in der Tabelle (Migrationskompatibilität), wird von der neuen `bcryptjs`-Hashing-Logik aber nicht genutzt (bcrypt bettet den Salt in den Hash ein). Legacy-Passwort-Hashes sind nicht kompatibel — migrierte Nutzer bräuchten ein neues Passwort.
 
 ### Fastify-5-Upgrade
 
 Auf `fastify@^5` + `@fastify/static@^9` aktualisiert — behebt die letzte verbleibende `npm audit`-Schwachstelle (`fast-uri`, Path-Traversal/Host-Confusion, transitiv über Fastify 4s eigene `@fastify/ajv-compiler`/`fast-json-stringify`). `npm audit` meldet danach **0 Schwachstellen**. Die zuvor wegen Fastify-4-Kompatibilität heruntergestufte `@fastify/static`-Version (`^7`, s. o.) konnte wieder auf die aktuelle Major-Version angehoben werden.
 
 Verifiziert durch vollständiges Wiederholen der bereits bestehenden Testreihen (kein Code in den Routen musste geändert werden, nur die Dependency-Version): `tsc` kompiliert ohne Fehler; Saison/Match/Tabelle/PDF-Export/Auth-Flow (Registrierung, Login, geschützte vs. öffentliche Routen) laufen wie zuvor; statisches Frontend + `/api`-Trennung + SPA-Fallback funktionieren unverändert; der Tauri-Sidecar wurde mit den neu gestagten (Fastify-5-)`node_modules` neu gebaut und lief im vollständigen App-Kontext (Sidecar-Start, `/health`, sauberes Beenden) fehlerfrei.
-- **Vereinfachung:** Das `salt`-Feld aus dem Legacy-Schema bleibt in der Tabelle (Migrationskompatibilität), wird von der neuen `bcryptjs`-Hashing-Logik aber nicht genutzt (bcrypt bettet den Salt in den Hash ein). Legacy-Passwort-Hashes sind nicht kompatibel — migrierte Nutzer bräuchten ein neues Passwort.
+
+### Automatisierte Tests (`npm test --workspace apps/backend`)
+
+Die Domänenlogik (`src/domain/*.ts`) war bis hierhin nur manuell per `curl` verifiziert — jede erneute Änderung hätte dieselben Handgriffe wieder gebraucht. Jetzt gibt es eine Testsuite mit dem in Node eingebauten Test-Runner (`node:test` über `tsx --test`, keine zusätzliche Test-Library nötig):
+
+- `matchScore.test.ts` — Top-3-von-4-Wertung, leere Eingabe, Unveränderlichkeit des Inputs.
+- `table.test.ts` — Sieg/Niederlage/Unentschieden-Punktevergabe, Ringe-Summierung, dass Zusatzschützen nicht zählen, dass ein Match ohne Ergebnis die Tabelle nicht beeinflusst, Sortierreihenfolge.
+- `personalScores.test.ts` — Summierung über mehrere Wochen, Schnitt nur über aktive Wochen (nicht über alle gespielten), Herausfiltern nie-erzielter Ergebnisse, getrennte Führung je Altersklasse, Sortierreihenfolge.
+- `roundRobin.test.ts` — Invarianten statt exakter Werte (da randomisiert): korrekte `maxWeek`/Match-Anzahl für 2–6 Mannschaften, jedes Team-Paar trifft genau zweimal aufeinander (einmal Heim, einmal Gast), bei gerader Mannschaftszahl keine Freilose.
+- `ageGroup.test.ts` — Validierung der beiden bekannten Altersklassen-Strings.
+
+23 Tests, alle grün, Laufzeit ~300ms. `.github/workflows/ci.yml` führt bei jedem Push/PR auf `master` Typecheck + diese Tests + den Frontend-Build aus — die exakten Befehle wurden vor dem Commit lokal einzeln nachvollzogen (im Gegensatz zum Release-Workflow, der mangels GitHub-Actions-Runner nur syntaktisch geprüft werden konnte).
 
 Verifiziert end-to-end (SQLite, lokal): mit `AUTH_ENABLED=false` (Standard) funktioniert alles wie vorher ohne Token. Mit `AUTH_ENABLED=true`: `POST /seasons` ohne Token → `401`; Erst-Registrierung → Token; zweite Registrierung → `403`; Login mit falschem Passwort → `401`; `POST /seasons` mit gültigem Token → `201`; `GET /seasons` bleibt ohne Token erreichbar. Im Frontend zusätzlich per Browser durchgespielt: Login-Screen erscheint, Erst-Registrierung, Saison mit Token anlegen, Session übersteht Reload, Abmelden führt zurück zum Login-Screen.
 
