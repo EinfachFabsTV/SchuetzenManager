@@ -59,7 +59,12 @@ Details, offene Punkte und Testprotokolle zu jedem Punkt: [TECHNICAL.md](TECHNIC
 
 ## Download
 
-Vorgefertigte Builds (Windows-Installer, portables ZIP, Linux) werden über die [GitHub Releases](../../releases) dieses Repos bereitgestellt, sobald ein Release veröffentlicht ist. Bis dahin: selbst bauen, siehe [TECHNICAL.md](TECHNICAL.md#setup--lokal-ausführen).
+Zwei getrennte Release-Kanäle, da zentrales Hosting rein optional ist:
+
+- **Desktop-App** (Windows-Installer, portables ZIP, Linux `.deb`/`.AppImage`): über die [GitHub Releases](../../releases) dieses Repos, ausgelöst durch einen `v*`-Tag.
+- **Server/Docker-Image** (für zentrales Hosting, siehe [TECHNICAL.md](TECHNICAL.md)): als eigenständiges Docker-Image unter `ghcr.io/einfachfabstv/schuetzenmanager-server`, ausgelöst durch einen separaten `server-v*`-Tag — unabhängig von den Desktop-Releases.
+
+Bis zum ersten veröffentlichten Release: selbst bauen, siehe [TECHNICAL.md](TECHNICAL.md#setup--lokal-ausführen).
 
 ## Lizenz / Copyright
 

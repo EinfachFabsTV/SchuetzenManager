@@ -168,15 +168,26 @@ Die gebaute App startet den Fastify-Backend-Prozess jetzt automatisch als Kindpr
 - Ein **hartes Beenden** des Hauptprozesses (Absturz, Task-Manager "Beenden", oder in diesem Test ein `taskkill`) löst `RunEvent::Exit` nicht aus, wodurch der Sidecar als verwaister Prozess weiterläuft und den Port belegt hält, bis er manuell beendet wird. Ein normales Schließen des Fensters über die UI durchläuft Tauris regulären Event-Loop und räumt korrekt auf — das ist der Pfad, den echte Nutzer verwenden, aber die Absturz-Lücke ist nicht abgesichert (z. B. über einen zusätzlichen Signal-Handler).
 - Die gestagten `node_modules` werden unkomprimiert kopiert (keine Größenoptimierung); das NSIS-Setup landet dadurch bei ~36 MB.
 
-### Releases (`.github/workflows/release.yml`)
+### Releases: zwei getrennte Kanäle
+
+Desktop-App und Server/Docker-Image werden bewusst über zwei unabhängige Workflows mit unterschiedlichen Tag-Präfixen veröffentlicht, da zentrales Hosting rein optional ist — ein Desktop-Release soll kein Docker-Image erzwingen und umgekehrt.
+
+#### Desktop-App (`.github/workflows/release.yml`)
 
 GitHub-Actions-Workflow, der bei einem Tag-Push (`v*`) oder manuell (`workflow_dispatch`) über `tauri-apps/tauri-action` Windows- und Linux-Builds erstellt und als [GitHub Release](../../releases) veröffentlicht (als Entwurf, `releaseDraft: true`, damit vor der öffentlichen Freigabe noch geprüft werden kann):
 
-- **Windows** (`windows-latest`): MSI-Installer, NSIS-Setup (`.exe`) über Tauris `"targets": "all"` in `tauri.conf.json`, zusätzlich ein zusammengestelltes **portables ZIP** der rohen `.exe` als eigener Workflow-Schritt (`Compress-Archive` + `softprops/action-gh-release`).
+- **Windows** (`windows-latest`): NSIS-Setup (`.exe`) über `tauri.conf.json`s `bundle.targets` (auf `["nsis", "deb", "appimage"]` eingeschränkt, s. o. — kein MSI mehr), zusätzlich ein zusammengestelltes **portables ZIP** mit `.exe` + Sidecar-Binary + `resources/` als eigener Workflow-Schritt (`Compress-Archive` + `softprops/action-gh-release`).
 - **Linux** (`ubuntu-22.04`): `.deb` und `.AppImage`, inkl. der laut Tauri-v2-Doku nötigen Systempakete (`libwebkit2gtk-4.1-dev`, `libgtk-3-dev`, `libappindicator3-dev`, `librsvg2-dev`, `patchelf`, `build-essential`).
+- Vor dem eigentlichen Tauri-Build laufen `prisma generate` und `prepare-sidecar` (siehe oben), damit die veröffentlichten Builds einen funktionierenden Sidecar enthalten.
 - macOS ist (noch) nicht Teil der Matrix — bei Bedarf einfach `macos-latest` im `matrix.include` ergänzen.
 
 **Nicht verifiziert:** Der Workflow konnte in diesem Entwicklungs-Environment nicht ausgelöst werden (kein GitHub-Actions-Runner verfügbar) — YAML-Syntax wurde über `js-yaml` geprüft, die referenzierten Pfade (`Rework/package-lock.json`, `Rework/apps/desktop/src-tauri/tauri.conf.json`) existieren nachweislich, und der zugrunde liegende `cargo tauri build`-Schritt wurde lokal unter Windows erfolgreich getestet (s. o.) — der Linux-Build-Pfad selbst wurde aber nicht durchlaufen. Vor dem ersten echten Release also einmal mit `workflow_dispatch` gegenprüfen.
+
+#### Server/Docker-Image (`.github/workflows/docker-release.yml`)
+
+Eigener Workflow, ausgelöst durch einen **`server-v*`**-Tag (bewusst anderes Präfix als `v*`) oder manuell. Baut das [Dockerfile](../Rework/Dockerfile) (Build-Context `Rework/`) über `docker/build-push-action` und veröffentlicht es nach `ghcr.io/<repo-owner>/schuetzenmanager-server`, getaggt mit der Versionsnummer aus dem Tag (`docker/metadata-action`, Pattern `server-v(.*)` → `1.2.3`) sowie `latest`.
+
+**Nicht verifiziert:** Wie schon beim Docker-Abschnitt weiter oben stand in diesem Environment weder `docker` noch ein GitHub-Actions-Runner zur Verfügung — nur YAML-Syntax geprüft. Die einzelnen Dockerfile-Schritte (Frontend-Build, Backend-Build inkl. `prisma generate:postgresql`) wurden aber erneut einzeln lokal nachvollzogen und funktionieren nach wie vor.
 
 ## Setup / lokal ausführen
 
