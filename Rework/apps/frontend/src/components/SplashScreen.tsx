@@ -45,7 +45,7 @@ export function SplashScreen({ onFinish }: { onFinish: () => void }) {
         @keyframes sm-rifle-in { from { transform: translateX(-140px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @keyframes sm-recoil { 0%, 100% { transform: translateX(0) rotate(0deg); } 50% { transform: translateX(-10px) rotate(-2deg); } }
         @keyframes sm-muzzle-flash { 0%, 100% { opacity: 0; transform: scale(0.4); } 50% { opacity: 1; transform: scale(1.3); } }
-        @keyframes sm-bullet { from { transform: translateX(0); opacity: 1; } 92% { opacity: 1; } to { transform: translateX(250px); opacity: 0; } }
+        @keyframes sm-bullet { from { transform: translateX(0); opacity: 1; } 92% { opacity: 1; } to { transform: translateX(228px); opacity: 0; } }
         @keyframes sm-impact-flash { 0% { opacity: 0; transform: scale(0.2); } 25% { opacity: 1; transform: scale(1.7); } 100% { opacity: 0; transform: scale(2.4); } }
         @keyframes sm-shake { 0%, 100% { transform: translate(0, 0); } 20% { transform: translate(-5px, 3px); } 40% { transform: translate(5px, -3px); } 60% { transform: translate(-4px, 2px); } 80% { transform: translate(4px, -2px); } }
         @keyframes sm-crack { 0% { opacity: 0; } 8% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; } }
@@ -54,18 +54,35 @@ export function SplashScreen({ onFinish }: { onFinish: () => void }) {
       <svg width="700" height="280" viewBox="0 0 800 320" role="img" aria-label="SchützenManager startet">
         <g style={{ transformBox: "fill-box", transformOrigin: "center", animation: "sm-rifle-in 500ms ease-out both" }}>
           <g style={{ transformBox: "fill-box", transformOrigin: "center", animation: "sm-recoil 300ms ease-out 1500ms both" }}>
-            <rect x="40" y="142" width="150" height="14" rx="4" fill="#3a3c33" />
-            <rect x="50" y="156" width="30" height="26" rx="3" fill="#3a3c33" />
-            <rect x="185" y="146" width="70" height="7" rx="3" fill="#4a4c45" />
-            <rect x="95" y="132" width="16" height="14" rx="2" fill="#4a4c45" />
+            {/* buttstock */}
+            <polygon points="8,148 55,140 55,152 42,170 18,166" fill="#3a3c33" />
+            {/* pistol grip */}
+            <rect x="96" y="158" width="15" height="24" rx="3" fill="#3a3c33" />
+            {/* receiver */}
+            <rect x="55" y="143" width="92" height="13" rx="2" fill="#3a3c33" />
+            {/* magazine */}
+            <polygon points="150,156 167,156 174,181 156,183" fill="#3a3c33" />
+            {/* scope mounts */}
+            <rect x="96" y="131" width="6" height="14" fill="#4a4c45" />
+            <rect x="128" y="131" width="6" height="14" fill="#4a4c45" />
+            {/* scope tube */}
+            <rect x="84" y="120" width="72" height="13" rx="6.5" fill="#4a4c45" />
+            <rect x="79" y="122.5" width="8" height="8" rx="1.5" fill="#4a4c45" />
+            <circle cx="156" cy="126.5" r="9" fill={theme.bg} stroke={theme.gold} strokeWidth="2.5" />
+            {/* bipod */}
+            <line x1="176" y1="153" x2="158" y2="196" stroke="#4a4c45" strokeWidth="4" strokeLinecap="round" />
+            <line x1="182" y1="153" x2="198" y2="196" stroke="#4a4c45" strokeWidth="4" strokeLinecap="round" />
+            {/* barrel */}
+            <rect x="145" y="147" width="128" height="6" rx="1.5" fill="#3a3c33" />
+            <rect x="269" y="144.5" width="16" height="11" rx="2" fill="#3a3c33" />
           </g>
           <polygon
-            points="260,149 280,149.5 262,143 275,150 262,157 280,150.5"
+            points="286,149 308,149.5 288,142 303,150 288,158 308,150.5"
             fill={theme.gold}
             style={{ transformBox: "fill-box", transformOrigin: "left center", animation: "sm-muzzle-flash 300ms ease-out 1500ms both" }}
           />
           <circle
-            cx="266"
+            cx="292"
             cy="150"
             r="4.5"
             fill={theme.gold}
