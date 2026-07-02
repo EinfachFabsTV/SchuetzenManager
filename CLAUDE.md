@@ -38,3 +38,24 @@ Classic JavaFX MVC-ish split, one package per concern, no dependency-injection f
 ## Language
 
 UI strings, comments, and domain terminology throughout the codebase are German (e.g. "Kreismeisterschaft", "Mannschaft", "Schützenklasse"). Keep new user-facing strings consistent with this.
+
+## Rework — the active successor project
+
+[Rework/](Rework/) is where new feature work happens; [Legacy/](Legacy/) above is frozen reference material only (port domain logic *from* it, don't add features *to* it). For full architecture, verification history, and known gaps, read [TECHNICAL.md](TECHNICAL.md) before making non-trivial changes — this section is just the command/orientation cheat sheet.
+
+npm workspace under `Rework/` with three apps:
+- **`apps/backend`** — Fastify + Prisma (TypeScript, ESM). Pure domain logic (round-robin scheduling, table/personal-score computation, PDF generation) lives in `src/domain/*.ts` and is unit-tested; `src/routes/*.ts` are thin Fastify handlers over it. Two Prisma schemas: `prisma/schema.prisma` (SQLite, default/local) and `prisma-postgresql/schema.prisma` (central hosting) — keep both in sync by hand when changing models, see TECHNICAL.md for why they can't be one file. Auth is opt-in via `AUTH_ENABLED` env var (`src/auth.ts`) so local/desktop use needs no login.
+- **`apps/frontend`** — React + Vite (TypeScript). Single fixed dark theme (`src/theme.ts`, no light/dark toggle). Talks to the backend via `/api/*`; `api/client.ts` switches between a relative URL (dev proxy / same-origin hosted deployment) and `http://localhost:3001/api` when running inside the Tauri webview.
+- **`apps/desktop`** — Tauri shell around the frontend, with the backend bundled as a sidecar process (see `scripts/prepare-sidecar.mjs` and TECHNICAL.md's "Tauri-Sidecar" section) so the built app doesn't need a separately-running backend.
+
+Common commands (run from `Rework/` unless noted):
+```bash
+npm install                                                          # once, installs all three workspaces
+npx prisma migrate deploy --schema=apps/backend/prisma/schema.prisma  # once, creates/migrates dev.db
+npm run dev --workspace apps/backend                                  # backend dev server (tsx watch)
+npm run dev --workspace apps/frontend                                 # Vite dev server, proxies /api to the backend
+npm test --workspace apps/backend                                     # domain-logic unit tests (node:test via tsx), ~300ms
+npm run build --workspace apps/desktop                                 # full Tauri build incl. sidecar prep (needs Rust + platform build tools)
+```
+
+`.github/workflows/ci.yml` runs typecheck + backend tests + frontend build on every push/PR — every command in it was verified to actually pass locally before committing (unlike `release.yml`, which builds/publishes desktop installers via `tauri-apps/tauri-action` and could only be checked for valid syntax in the environment this was built in, no GitHub Actions runner available).
