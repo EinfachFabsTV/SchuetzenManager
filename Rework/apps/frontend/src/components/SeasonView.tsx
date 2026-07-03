@@ -34,6 +34,7 @@ export function SeasonView({ seasonId, user, onDeleted }: { seasonId: number; us
     }
   }
 
+  // On season switch: show the loading state and reset to the first tab.
   useEffect(() => {
     setSeason(null);
     setTab("Übersicht");
@@ -41,7 +42,19 @@ export function SeasonView({ seasonId, user, onDeleted }: { seasonId: number; us
       .getSeason(seasonId)
       .then(setSeason)
       .catch((err) => setError(err.message));
-  }, [seasonId, refreshKey]);
+  }, [seasonId]);
+
+  // On an in-place refresh (a save in one of the tabs): refetch without
+  // nulling the season or resetting the tab, so the user stays where they
+  // were instead of being bounced back to "Übersicht".
+  useEffect(() => {
+    if (refreshKey === 0) return;
+    api
+      .getSeason(seasonId)
+      .then(setSeason)
+      .catch((err) => setError(err.message));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshKey]);
 
   if (error) return <p style={{ color: theme.danger }}>{error}</p>;
   if (!season) return <p style={{ color: theme.textMuted }}>Lädt…</p>;
