@@ -1,4 +1,4 @@
-import type { Match, PersonalScoreRow, SeasonDetail, SeasonSummary, TableRow, Team } from "../types";
+import type { Match, MatchDate, PersonalScoreRow, Responsible, SeasonDetail, SeasonSummary, TableRow, Team } from "../types";
 
 const TOKEN_KEY = "schuetzenmanager_token";
 
@@ -79,6 +79,16 @@ export const api = {
   getUsers: () => request<AuthUser[]>("/users"),
   createUser: (email: string, realName: string) =>
     request<AuthUser>("/users", { method: "POST", body: JSON.stringify({ email, realName }) }),
+  deleteUser: (id: number) => request<void>(`/users/${id}`, { method: "DELETE" }),
+  resetUserPassword: (id: number) => request<{ ok: true }>(`/users/${id}/reset-password`, { method: "POST" }),
+  updateSeasonInfo: (id: number, data: { infoBox?: string | null; contactMail?: string | null; contactPerson?: string | null }) =>
+    request<SeasonDetail>(`/seasons/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  updateDates: (id: number, dates: { week: number; date: string | null }[]) =>
+    request<MatchDate[]>(`/seasons/${id}/dates`, { method: "PUT", body: JSON.stringify({ dates }) }),
+  getResponsible: (seasonId: number) => request<Responsible[]>(`/seasons/${seasonId}/responsible`),
+  addResponsible: (seasonId: number, userId: number, team: string) =>
+    request<Responsible>(`/seasons/${seasonId}/responsible`, { method: "POST", body: JSON.stringify({ userId, team }) }),
+  deleteResponsible: (id: number) => request<void>(`/responsible/${id}`, { method: "DELETE" }),
 };
 
 export type ShootFormRow = {

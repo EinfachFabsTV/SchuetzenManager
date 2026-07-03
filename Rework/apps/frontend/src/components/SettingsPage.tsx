@@ -135,6 +135,7 @@ function UserManagementSection() {
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [createdMessage, setCreatedMessage] = useState<string | null>(null);
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
 
   useEffect(() => {
     api
@@ -142,6 +143,27 @@ function UserManagementSection() {
       .then(setUsers)
       .catch((err) => setError(err.message));
   }, []);
+
+  async function handleReset(u: AuthUser) {
+    setActionMessage(null);
+    try {
+      await api.resetUserPassword(u.id);
+      setActionMessage(`Neues Passwort für ${u.realName} per E-Mail versendet.`);
+    } catch (err) {
+      setActionMessage((err as Error).message);
+    }
+  }
+
+  async function handleDelete(u: AuthUser) {
+    setActionMessage(null);
+    if (!window.confirm(`Benutzer ${u.realName} (${u.email}) löschen?`)) return;
+    try {
+      await api.deleteUser(u.id);
+      setUsers((prev) => (prev ? prev.filter((x) => x.id !== u.id) : prev));
+    } catch (err) {
+      setActionMessage((err as Error).message);
+    }
+  }
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -169,12 +191,29 @@ function UserManagementSection() {
       {users && users.length > 0 && (
         <ul style={{ listStyle: "none", padding: 0, margin: "0 0 16px 0" }}>
           {users.map((u) => (
-            <li key={u.id} style={{ padding: "6px 0", borderBottom: `1px solid ${theme.border}`, fontSize: 13 }}>
-              {u.realName} <span style={{ color: theme.textMuted }}>({u.email})</span>
+            <li key={u.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: `1px solid ${theme.border}`, fontSize: 13 }}>
+              <span style={{ flex: 1 }}>
+                {u.realName} <span style={{ color: theme.textMuted }}>({u.email})</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => handleReset(u)}
+                style={{ border: `1px solid ${theme.border}`, background: theme.surfaceAlt, color: theme.text, borderRadius: 6, padding: "4px 8px", fontSize: 12, cursor: "pointer" }}
+              >
+                Passwort zurücksetzen
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDelete(u)}
+                style={{ border: `1px solid ${theme.danger}`, background: "transparent", color: theme.danger, borderRadius: 6, padding: "4px 8px", fontSize: 12, cursor: "pointer" }}
+              >
+                Löschen
+              </button>
             </li>
           ))}
         </ul>
       )}
+      {actionMessage && <p style={{ fontSize: 13, color: theme.text, marginBottom: 12 }}>{actionMessage}</p>}
       {createdMessage && <p style={{ fontSize: 13, color: theme.text, marginBottom: 12 }}>{createdMessage}</p>}
       {showAdd ? (
         <form onSubmit={handleCreate}>

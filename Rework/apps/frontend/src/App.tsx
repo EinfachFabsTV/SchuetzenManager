@@ -54,6 +54,7 @@ export default function App() {
               {view.kind === "season" && (
                 <SeasonView
                   seasonId={view.id}
+                  user={user}
                   onDeleted={() => {
                     reloadSeasons();
                     setView({ kind: "empty" });

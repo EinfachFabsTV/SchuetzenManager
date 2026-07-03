@@ -1,21 +1,25 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
+import type { AuthUser } from "../api/client";
 import type { SeasonDetail } from "../types";
 import { OverviewTab } from "./OverviewTab";
 import { MatchesTab } from "./MatchesTab";
 import { ShootersTab } from "./ShootersTab";
+import { DatesInfoTab } from "./DatesInfoTab";
+import { ResponsibleTab } from "./ResponsibleTab";
 import { PdfExportButton } from "./PdfExportButton";
 import { theme } from "../theme";
 
-const TABS = ["Übersicht", "Wettkämpfe", "Schützen/innen"] as const;
-type Tab = (typeof TABS)[number];
-
-export function SeasonView({ seasonId, onDeleted }: { seasonId: number; onDeleted: () => void }) {
+export function SeasonView({ seasonId, user, onDeleted }: { seasonId: number; user: AuthUser | null; onDeleted: () => void }) {
   const [season, setSeason] = useState<SeasonDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>("Übersicht");
+  const [tab, setTab] = useState<string>("Übersicht");
   const [refreshKey, setRefreshKey] = useState(0);
   const [deleting, setDeleting] = useState(false);
+
+  // "Verantwortliche" only applies to central hosting (webservice users),
+  // so it's only offered when a user is logged in.
+  const tabs = ["Übersicht", "Wettkämpfe", "Schützen/innen", "Termine & Info", ...(user ? ["Verantwortliche"] : [])];
 
   async function handleDelete() {
     if (!season) return;
@@ -60,7 +64,7 @@ export function SeasonView({ seasonId, onDeleted }: { seasonId: number; onDelete
         </div>
       </div>
       <div style={{ display: "flex", gap: 4, borderBottom: `1px solid ${theme.border}`, marginBottom: 20 }}>
-        {TABS.map((t) => (
+        {tabs.map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -82,6 +86,8 @@ export function SeasonView({ seasonId, onDeleted }: { seasonId: number; onDelete
       {tab === "Übersicht" && <OverviewTab season={season} onTeamUpdated={() => setRefreshKey((k) => k + 1)} />}
       {tab === "Wettkämpfe" && <MatchesTab season={season} onMatchSaved={() => setRefreshKey((k) => k + 1)} />}
       {tab === "Schützen/innen" && <ShootersTab seasonId={season.id} />}
+      {tab === "Termine & Info" && <DatesInfoTab season={season} onUpdated={() => setRefreshKey((k) => k + 1)} />}
+      {tab === "Verantwortliche" && <ResponsibleTab seasonId={season.id} teams={season.teams} />}
     </div>
   );
 }

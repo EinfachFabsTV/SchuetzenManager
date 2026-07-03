@@ -46,6 +46,14 @@ export type MatchDate = {
   seasonId: number;
 };
 
+export type Responsible = {
+  id: number;
+  userId: number;
+  team: string;
+  email: string;
+  realName: string;
+};
+
 export type SeasonDetail = SeasonSummary & {
   infoBox: string | null;
   contactMail: string | null;

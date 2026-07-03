@@ -5,7 +5,9 @@ import { api } from "../api/client";
 
 const invokeMock = vi.fn();
 vi.mock("@tauri-apps/api/core", () => ({ invoke: (...args: unknown[]) => invokeMock(...args) }));
-vi.mock("../api/client", () => ({ api: { getUsers: vi.fn(), createUser: vi.fn() } }));
+vi.mock("../api/client", () => ({
+  api: { getUsers: vi.fn(), createUser: vi.fn(), deleteUser: vi.fn(), resetUserPassword: vi.fn() },
+}));
 
 function markAsTauri() {
   Object.defineProperty(window, "__TAURI_INTERNALS__", { value: {}, configurable: true });
@@ -22,6 +24,8 @@ describe("SettingsPage", () => {
     invokeMock.mockReset();
     vi.mocked(api.getUsers).mockReset().mockResolvedValue([]);
     vi.mocked(api.createUser).mockReset();
+    vi.mocked(api.deleteUser).mockReset().mockResolvedValue(undefined);
+    vi.mocked(api.resetUserPassword).mockReset().mockResolvedValue({ ok: true });
   });
 
   afterEach(() => {
@@ -156,6 +160,44 @@ describe("SettingsPage", () => {
       fireEvent.click(screen.getByRole("button", { name: "Anlegen" }));
 
       expect(await screen.findByText("Diese E-Mail-Adresse ist bereits registriert.")).toBeInTheDocument();
+    });
+
+    it("resets a user's password and shows a confirmation", async () => {
+      vi.mocked(api.getUsers).mockResolvedValue([user]);
+
+      render(<SettingsPage user={user} />);
+      await screen.findByText("Admin");
+
+      fireEvent.click(screen.getByRole("button", { name: "Passwort zurücksetzen" }));
+
+      await waitFor(() => expect(api.resetUserPassword).toHaveBeenCalledWith(1));
+      expect(await screen.findByText(/per E-Mail versendet/)).toBeInTheDocument();
+    });
+
+    it("deletes a user after confirmation and removes them from the list", async () => {
+      vi.mocked(api.getUsers).mockResolvedValue([user, { id: 2, email: "b@b.de", realName: "B" }]);
+      vi.spyOn(window, "confirm").mockReturnValue(true);
+
+      render(<SettingsPage user={user} />);
+      await screen.findByText("Admin");
+
+      fireEvent.click(screen.getAllByRole("button", { name: "Löschen" })[0]);
+
+      await waitFor(() => expect(api.deleteUser).toHaveBeenCalledWith(1));
+      await waitFor(() => expect(screen.queryByText("Admin")).not.toBeInTheDocument());
+      expect(screen.getByText("B")).toBeInTheDocument();
+    });
+
+    it("does not delete when the confirmation is cancelled", async () => {
+      vi.mocked(api.getUsers).mockResolvedValue([user]);
+      vi.spyOn(window, "confirm").mockReturnValue(false);
+
+      render(<SettingsPage user={user} />);
+      await screen.findByText("Admin");
+
+      fireEvent.click(screen.getByRole("button", { name: "Löschen" }));
+
+      expect(api.deleteUser).not.toHaveBeenCalled();
     });
   });
 });
