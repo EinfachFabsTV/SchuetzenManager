@@ -220,6 +220,99 @@ test("listing users requires a token and never exposes password hashes", async (
   assert.ok(users.every((u: Record<string, unknown>) => !("password" in u)));
 });
 
+test("updating season info persists infoBox/contactMail/contactPerson", async () => {
+  const res = await app.inject({
+    method: "PUT",
+    url: `/api/seasons/${seasonId}`,
+    headers: { authorization: `Bearer ${token}` },
+    payload: { infoBox: "Hinweistext", contactMail: "kontakt@example.com", contactPerson: "Max Muster" },
+  });
+  assert.equal(res.statusCode, 200);
+
+  const season = (await app.inject({ method: "GET", url: `/api/seasons/${seasonId}` })).json();
+  assert.equal(season.infoBox, "Hinweistext");
+  assert.equal(season.contactMail, "kontakt@example.com");
+  assert.equal(season.contactPerson, "Max Muster");
+});
+
+test("updating season info is blocked without a token", async () => {
+  const res = await app.inject({
+    method: "PUT",
+    url: `/api/seasons/${seasonId}`,
+    payload: { infoBox: "x" },
+  });
+  assert.equal(res.statusCode, 401);
+});
+
+test("assigning dates to weeks upserts them and is reflected in the season", async () => {
+  const res = await app.inject({
+    method: "PUT",
+    url: `/api/seasons/${seasonId}/dates`,
+    headers: { authorization: `Bearer ${token}` },
+    payload: { dates: [{ week: 1, date: "2026-03-15" }, { week: 2, date: null }] },
+  });
+  assert.equal(res.statusCode, 200);
+
+  const season = (await app.inject({ method: "GET", url: `/api/seasons/${seasonId}` })).json();
+  const week1 = season.matchDates.find((d: { week: number }) => d.week === 1);
+  assert.equal(week1.date, "2026-03-15");
+});
+
+test("assigning a responsible user to a team, rejecting duplicates, then removing it", async () => {
+  const member = await prisma.user.findUnique({ where: { email: "member@example.com" } });
+  assert.ok(member);
+
+  const create = await app.inject({
+    method: "POST",
+    url: `/api/seasons/${seasonId}/responsible`,
+    headers: { authorization: `Bearer ${token}` },
+    payload: { userId: member.id, team: "Geeste 1" },
+  });
+  assert.equal(create.statusCode, 201);
+  const responsibleId = create.json().id;
+  assert.equal(create.json().email, "member@example.com");
+
+  const list = (await app.inject({ method: "GET", url: `/api/seasons/${seasonId}/responsible`, headers: { authorization: `Bearer ${token}` } })).json();
+  assert.ok(list.some((r: { id: number; team: string }) => r.id === responsibleId && r.team === "Geeste 1"));
+
+  const dupe = await app.inject({
+    method: "POST",
+    url: `/api/seasons/${seasonId}/responsible`,
+    headers: { authorization: `Bearer ${token}` },
+    payload: { userId: member.id, team: "Geeste 1" },
+  });
+  assert.equal(dupe.statusCode, 409);
+
+  const del = await app.inject({ method: "DELETE", url: `/api/responsible/${responsibleId}`, headers: { authorization: `Bearer ${token}` } });
+  assert.equal(del.statusCode, 204);
+});
+
+test("resetting a user's password changes the stored hash", async () => {
+  const before = await prisma.user.findUnique({ where: { email: "member@example.com" } });
+  assert.ok(before);
+
+  const res = await app.inject({
+    method: "POST",
+    url: `/api/users/${before.id}/reset-password`,
+    headers: { authorization: `Bearer ${token}` },
+  });
+  assert.equal(res.statusCode, 200);
+
+  const after = await prisma.user.findUnique({ where: { email: "member@example.com" } });
+  assert.notEqual(after!.password, before.password);
+});
+
+test("deleting a user removes them from the list", async () => {
+  const member = await prisma.user.findUnique({ where: { email: "member@example.com" } });
+  assert.ok(member);
+
+  const res = await app.inject({ method: "DELETE", url: `/api/users/${member.id}`, headers: { authorization: `Bearer ${token}` } });
+  assert.equal(res.statusCode, 204);
+
+  const users = (await app.inject({ method: "GET", url: "/api/users", headers: { authorization: `Bearer ${token}` } })).json();
+  assert.ok(!users.some((u: { email: string }) => u.email === "member@example.com"));
+});
+
 test("deleting the season removes it (DELETE without a body must not 400)", async () => {
   const res = await app.inject({
     method: "DELETE",

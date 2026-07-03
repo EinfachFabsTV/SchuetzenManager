@@ -35,7 +35,17 @@ export type PdfMatch = {
   week: number;
   homeTeam: string;
   guestTeam: string;
+  // ISO "YYYY-MM-DD" or null; rendered as DD.MM.YYYY in the week header.
+  date?: string | null;
 };
+
+// ISO "YYYY-MM-DD" -> "DD.MM.YYYY". Returns "" for empty/malformed input so
+// the week header simply omits the date rather than printing garbage.
+function formatDate(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  return m ? `${m[3]}.${m[2]}.${m[1]}` : "";
+}
 
 export type PdfSections = {
   dates?: { teams: PdfTeam[]; matchesByWeek: PdfMatch[][] };
@@ -182,7 +192,8 @@ function drawDates(w: PageWriter, season: PdfSeason, teams: PdfTeam[], matchesBy
   for (const week of matchesByWeek) {
     if (week.length === 0) continue;
     w.ensureSpace(ROW_HEIGHT * (week.length + 1));
-    w.text(`Wettkampfwoche ${week[0].week}`, PAGE_MARGIN, w.y, { bold: true });
+    const dateLabel = formatDate(week[0].date);
+    w.text(`Wettkampfwoche ${week[0].week}${dateLabel ? ` — ${dateLabel}` : ""}`, PAGE_MARGIN, w.y, { bold: true });
     w.y -= ROW_HEIGHT;
     for (const match of week) {
       w.text(`${match.homeTeam} vs. ${match.guestTeam}`, PAGE_MARGIN + 10, w.y);

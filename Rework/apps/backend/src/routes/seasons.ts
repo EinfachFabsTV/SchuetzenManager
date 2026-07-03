@@ -83,6 +83,59 @@ export const seasonsRoutes: FastifyPluginAsync = async (app) => {
     return null;
   });
 
+  // Mirrors view/EditDateInfo.java: the season-level metadata shown on the
+  // PDF (Ansprechpartner, Kontakt-Mail, Infobox-Text). Partial update - only
+  // the provided fields are changed.
+  app.put<{ Params: { id: string }; Body: { infoBox?: string | null; contactMail?: string | null; contactPerson?: string | null } }>(
+    "/seasons/:id",
+    { preHandler: requireAuth },
+    async (request, reply) => {
+      const id = Number(request.params.id);
+      const { infoBox, contactMail, contactPerson } = request.body;
+      try {
+        return await prisma.season.update({
+          where: { id },
+          data: {
+            ...(infoBox !== undefined ? { infoBox } : {}),
+            ...(contactMail !== undefined ? { contactMail } : {}),
+            ...(contactPerson !== undefined ? { contactPerson } : {}),
+          },
+        });
+      } catch {
+        reply.code(404);
+        return { error: "Saison nicht gefunden." };
+      }
+    },
+  );
+
+  // Mirrors view/WeekToDate.java#save(): assign a date to each competition
+  // week. Dates are stored as ISO "YYYY-MM-DD" strings (the native <input
+  // type="date"> value); an empty/null date clears the week. Upserts by the
+  // (seasonId, week) unique constraint so it's safe to send all weeks at once.
+  app.put<{ Params: { id: string }; Body: { dates: { week: number; date: string | null }[] } }>(
+    "/seasons/:id/dates",
+    { preHandler: requireAuth },
+    async (request, reply) => {
+      const id = Number(request.params.id);
+      const season = await prisma.season.findUnique({ where: { id } });
+      if (!season) {
+        reply.code(404);
+        return { error: "Saison nicht gefunden." };
+      }
+      const { dates } = request.body;
+      await prisma.$transaction(
+        (dates ?? []).map((d) =>
+          prisma.matchDate.upsert({
+            where: { seasonId_week: { seasonId: id, week: d.week } },
+            create: { seasonId: id, week: d.week, date: d.date || null },
+            update: { date: d.date || null },
+          }),
+        ),
+      );
+      return prisma.matchDate.findMany({ where: { seasonId: id }, orderBy: { week: "asc" } });
+    },
+  );
+
   app.get<{ Params: { id: string } }>("/seasons/:id", async (request, reply) => {
     const id = Number(request.params.id);
     const season = await prisma.season.findUnique({
@@ -150,8 +203,9 @@ export const seasonsRoutes: FastifyPluginAsync = async (app) => {
       const requested = new Set((request.query.sections ?? "dates,table,scores").split(","));
       const teamNamesById = new Map(season.teams.map((t) => [t.id, t.name]));
       const maxWeek = season.matchDates.length > 0 ? Math.max(...season.matchDates.map((d) => d.week)) : 0;
+      const dateByWeek = new Map(season.matchDates.map((d) => [d.week, d.date]));
 
-      const matchesByWeek: { week: number; homeTeam: string; guestTeam: string }[][] = Array.from(
+      const matchesByWeek: { week: number; homeTeam: string; guestTeam: string; date: string | null }[][] = Array.from(
         { length: maxWeek },
         () => [],
       );
@@ -160,6 +214,7 @@ export const seasonsRoutes: FastifyPluginAsync = async (app) => {
           week: match.week,
           homeTeam: match.homeTeam.name,
           guestTeam: match.guestTeam.name,
+          date: dateByWeek.get(match.week) ?? null,
         });
       }
 
