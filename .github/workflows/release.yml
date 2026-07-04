@@ -97,7 +97,7 @@ jobs:
           # the sidecar exactly like the installed version does.
           $dest = "SchuetzenManager-portable-windows-x64.zip"
           $releaseDir = "Rework/apps/desktop/src-tauri/target/release"
-          Compress-Archive -Path "$releaseDir/schuetzenmanager.exe", "$releaseDir/node-*.exe", "$releaseDir/resources" -DestinationPath $dest
+          Compress-Archive -Path "$releaseDir/schuetzenmanager.exe", "$releaseDir/schuetzenmanager-backend-*.exe", "$releaseDir/resources" -DestinationPath $dest
           echo "PORTABLE_ZIP=$dest" >> $env:GITHUB_ENV
 
       - name: Upload portable Windows ZIP to release

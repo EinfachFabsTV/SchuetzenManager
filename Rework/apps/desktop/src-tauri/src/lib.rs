@@ -40,11 +40,26 @@ fn start_backend_sidecar(app: &tauri::AppHandle, db_path: &Path) -> Result<Comma
     let backend_dir = resolve_backend_dir()?;
     let server_js = backend_dir.join("dist").join("server.js");
 
+    // Clear any orphaned sidecar from a previous hard-kill (Task Manager /
+    // power loss) - it would still hold port 3001 and make this spawn fail
+    // with EADDRINUSE. Safe: no sidecar of this app instance is running yet
+    // when we get here (it's only started on unlock). Windows-only; the
+    // uniquely-named process means no unrelated node.exe is affected.
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        let _ = std::process::Command::new("taskkill")
+            .args(["/F", "/T", "/IM", "schuetzenmanager-backend.exe"])
+            .creation_flags(CREATE_NO_WINDOW)
+            .output();
+    }
+
     let database_url = format!("file:{}", db_path.display().to_string().replace('\\', "/"));
 
     let (mut rx, child) = app
         .shell()
-        .sidecar("node")
+        .sidecar("schuetzenmanager-backend")
         .map_err(|e| format!("sidecar lookup failed: {e}"))?
         .args([server_js.display().to_string()])
         .env("DATABASE_URL", database_url)

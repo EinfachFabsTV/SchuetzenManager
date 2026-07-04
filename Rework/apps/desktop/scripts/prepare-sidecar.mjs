@@ -93,7 +93,12 @@ execSync("npx prisma migrate deploy", {
 console.log("== 4/4: bundling the Node runtime as the sidecar binary ==");
 mkdirSync(binariesDir, { recursive: true });
 const exeSuffix = process.platform === "win32" ? ".exe" : "";
-const sidecarDest = path.join(binariesDir, `node-${TARGET_TRIPLE}${exeSuffix}`);
+// Named schuetzenmanager-backend (not the generic "node") so the running
+// sidecar process is uniquely identifiable: it never collides with the
+// user's own node.exe, and the NSIS installer can close exactly this
+// process before overwriting its files (the Prisma engine DLL is loaded by
+// it - see installer-hooks.nsh).
+const sidecarDest = path.join(binariesDir, `schuetzenmanager-backend-${TARGET_TRIPLE}${exeSuffix}`);
 copyFileSync(process.execPath, sidecarDest);
 if (process.platform !== "win32") {
   execSync(`chmod +x "${sidecarDest}"`);
