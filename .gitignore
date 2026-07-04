@@ -28,3 +28,6 @@ Rework/apps/desktop/src-tauri/binaries/
 # OS/editor
 .DS_Store
 Thumbs.db
+
+# Local archive of built installers (binaries live on GitHub Releases)
+Versionen/
