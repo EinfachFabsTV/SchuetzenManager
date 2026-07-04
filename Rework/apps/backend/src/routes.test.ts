@@ -41,6 +41,25 @@ let seasonId: number;
 let teamId: number;
 let matchId: number;
 
+test("CORS preflight from the desktop (Tauri) origin is allowed", async () => {
+  // Regression guard for the desktop "Failed to fetch" bug: a cross-origin
+  // non-simple request (POST/PUT/DELETE) triggers an OPTIONS preflight, and
+  // without CORS the browser blocks it before any handler runs. The Vite
+  // proxy used in the web test is same-origin, so only this inject-level
+  // check catches it.
+  const res = await app.inject({
+    method: "OPTIONS",
+    url: "/api/seasons",
+    headers: {
+      origin: "http://tauri.localhost",
+      "access-control-request-method": "POST",
+      "access-control-request-headers": "content-type",
+    },
+  });
+  assert.ok(res.statusCode < 400, `preflight status ${res.statusCode}`);
+  assert.equal(res.headers["access-control-allow-origin"], "http://tauri.localhost");
+});
+
 test("writes are blocked without a token", async () => {
   const res = await app.inject({ method: "POST", url: "/api/seasons", payload: { year: 2026, label: "x", teams: [] } });
   assert.equal(res.statusCode, 401);
@@ -125,6 +144,25 @@ test("saving a match result updates the table", async () => {
   assert.ok(winner);
   assert.equal(winner.win, 1);
   assert.equal(winner.points, 2);
+});
+
+test("rescheduling a match to a different week persists it", async () => {
+  const move = await app.inject({
+    method: "PATCH",
+    url: `/api/matches/${matchId}/week`,
+    headers: { authorization: `Bearer ${token}` },
+    payload: { week: 2 },
+  });
+  assert.equal(move.statusCode, 200);
+  assert.equal(move.json().week, 2);
+
+  const invalid = await app.inject({
+    method: "PATCH",
+    url: `/api/matches/${matchId}/week`,
+    headers: { authorization: `Bearer ${token}` },
+    payload: { week: 0 },
+  });
+  assert.equal(invalid.statusCode, 400);
 });
 
 test("personal scores reflect the saved shoot", async () => {

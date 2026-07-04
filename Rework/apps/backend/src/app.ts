@@ -3,6 +3,7 @@ import path from "node:path";
 import fs from "node:fs";
 import Fastify from "fastify";
 import fastifyStatic from "@fastify/static";
+import fastifyCors from "@fastify/cors";
 import { seasonsRoutes } from "./routes/seasons.js";
 import { matchesRoutes } from "./routes/matches.js";
 import { teamsRoutes } from "./routes/teams.js";
@@ -16,6 +17,17 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // exercise it via .inject()) without also binding a real network port.
 export async function buildApp(options?: { logger?: boolean }) {
   const app = Fastify({ logger: options?.logger ?? true });
+
+  // Needed for the desktop app: the Tauri webview runs at its own origin
+  // (e.g. http://tauri.localhost) and calls this sidecar backend
+  // cross-origin at http://localhost:3001, which triggers a CORS preflight
+  // on any non-simple request (POST/PUT/DELETE, or anything with a
+  // Content-Type/Authorization header). Without this, writes fail in the
+  // desktop app with a bare "Failed to fetch" while GETs still work. Dev
+  // (Vite proxy) and central hosting (same-origin) don't hit CORS at all,
+  // so reflecting the origin is safe here - the sidecar is only reachable
+  // from the local machine anyway.
+  await app.register(fastifyCors, { origin: true });
 
   app.get("/health", async () => ({ status: "ok" }));
 
