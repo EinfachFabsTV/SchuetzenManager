@@ -7,6 +7,7 @@ import { SeasonView } from "./components/SeasonView";
 import { LoginGate } from "./components/LoginGate";
 import { SplashScreen } from "./components/SplashScreen";
 import { SettingsPage } from "./components/SettingsPage";
+import { UpdateNotice } from "./components/UpdateNotice";
 import { theme } from "./theme";
 
 type View = { kind: "empty" } | { kind: "create" } | { kind: "season"; id: number } | { kind: "settings" };
@@ -32,6 +33,7 @@ export default function App() {
 
   return (
     <>
+      <UpdateNotice />
       {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} />}
       <LoginGate>
         {({ user, onLogout }) => (

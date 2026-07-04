@@ -119,6 +119,24 @@ fn resolve_vault_paths(app: &tauri::AppHandle) -> Result<VaultPaths, String> {
     })
 }
 
+// Keeps a one-generation-back backup of the encrypted database and its
+// metadata (database.db.enc.bak / vault.json.bak) so a user's data can
+// never be silently lost - not by a failed update, a crash mid-write, or a
+// corrupted re-encrypt. Called on every unlock *before* the running session
+// can overwrite anything, so the .bak always holds the last known-good
+// state. Best-effort: a backup failure is logged but does not block unlock.
+fn backup_vault(paths: &VaultPaths) {
+    for (src, suffix) in [(&paths.enc_db, "database.db.enc.bak"), (&paths.vault_json, "vault.json.bak")] {
+        if src.exists() {
+            if let Some(dir) = src.parent() {
+                if let Err(e) = fs::copy(src, dir.join(suffix)) {
+                    log::error!("Konnte Sicherungskopie {suffix} nicht schreiben: {e}");
+                }
+            }
+        }
+    }
+}
+
 fn crockford() -> data_encoding::Encoding {
     let mut spec = Specification::new();
     // Crockford base32: excludes I/L/O/U to avoid confusion with 1/0 when
@@ -334,6 +352,9 @@ pub fn vault_unlock(app: tauri::AppHandle, secret: String) -> Result<(), String>
     if !paths.vault_json.exists() {
         return Err("Kein Tresor eingerichtet.".to_string());
     }
+    // Snapshot the last known-good encrypted DB before this session can
+    // touch anything (data-loss insurance across updates/crashes).
+    backup_vault(&paths);
     let meta_json = fs::read_to_string(&paths.vault_json).map_err(|e| format!("could not read vault metadata: {e}"))?;
     let meta: VaultMeta = serde_json::from_str(&meta_json).map_err(|e| format!("could not parse vault metadata: {e}"))?;
 

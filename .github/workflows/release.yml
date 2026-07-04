@@ -50,12 +50,20 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Signs the update artifacts and generates/uploads latest.json so
+          # the in-app auto-updater accepts them. Add these two repo secrets
+          # (see README/TECHNICAL) - without them the build still works but
+          # produces no update manifest.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           projectPath: Rework/apps/desktop
           tagName: ${{ github.ref_name }}
           releaseName: "SchützenManager ${{ github.ref_name }}"
           releaseBody: |
-            Automatisch gebauter Release. Windows: MSI-Installer, NSIS-Setup (.exe) und ein portables ZIP. Linux: .deb und .AppImage.
+            Automatisch gebauter Release. Windows: NSIS-Setup (.exe) und ein portables ZIP. Linux: .deb und .AppImage.
+
+            Optionale Aktualisierung. (Für ein Pflicht-Update den Marker [pflicht] in diese Beschreibung aufnehmen.)
           releaseDraft: true
           prerelease: false
 

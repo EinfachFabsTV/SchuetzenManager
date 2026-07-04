@@ -23,8 +23,15 @@
       "csp": null
     }
   },
+  "plugins": {
+    "updater": {
+      "endpoints": ["https://github.com/EinfachFabsTV/SchuetzenManager/releases/latest/download/latest.json"],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVCNThDOTMyQUI2RkRCNkQKUldSdDIyK3JNc2xZNjVHNU5vNytnTlRmU1N2ajJLNE0wMnBBYXBCbysrTEUvM0tOTWo0cGw5SjkK"
+    }
+  },
   "bundle": {
     "active": true,
+    "createUpdaterArtifacts": true,
     "targets": ["nsis", "deb", "appimage"],
     "icon": [
       "icons/32x32.png",
