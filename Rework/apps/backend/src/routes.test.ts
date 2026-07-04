@@ -58,6 +58,12 @@ test("CORS preflight from the desktop (Tauri) origin is allowed", async () => {
   });
   assert.ok(res.statusCode < 400, `preflight status ${res.statusCode}`);
   assert.equal(res.headers["access-control-allow-origin"], "http://tauri.localhost");
+  // Must allow PUT/DELETE, not just the CORS-safelisted GET/HEAD/POST -
+  // otherwise every edit/delete is blocked by the browser as "Failed to
+  // fetch" (@fastify/cors defaults to GET,HEAD,POST only).
+  const allowed = String(res.headers["access-control-allow-methods"] ?? "");
+  assert.ok(/PUT/i.test(allowed), `PUT not allowed: ${allowed}`);
+  assert.ok(/DELETE/i.test(allowed), `DELETE not allowed: ${allowed}`);
 });
 
 test("writes are blocked without a token", async () => {

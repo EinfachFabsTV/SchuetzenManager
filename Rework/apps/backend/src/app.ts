@@ -27,7 +27,15 @@ export async function buildApp(options?: { logger?: boolean }) {
   // (Vite proxy) and central hosting (same-origin) don't hit CORS at all,
   // so reflecting the origin is safe here - the sidecar is only reachable
   // from the local machine anyway.
-  await app.register(fastifyCors, { origin: true });
+  // origin: true reflects the caller's origin (fine - localhost-only
+  // sidecar). methods MUST be listed explicitly: @fastify/cors defaults to
+  // only GET,HEAD,POST, so a PUT/PATCH/DELETE preflight would be rejected
+  // by the browser ("Failed to fetch") even though the route exists - which
+  // broke every edit/delete in the desktop app while POST (create) worked.
+  await app.register(fastifyCors, {
+    origin: true,
+    methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  });
 
   app.get("/health", async () => ({ status: "ok" }));
 

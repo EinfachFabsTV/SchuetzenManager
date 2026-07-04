@@ -1,6 +1,7 @@
 import type { SeasonSummary } from "../types";
 import type { AuthUser } from "../api/client";
 import { seasonSections } from "./seasonSections";
+import { VersionFooter } from "./VersionFooter";
 import { theme } from "../theme";
 
 type Props = {
@@ -89,17 +90,20 @@ export function Sidebar({
         ⚙ Einstellungen
       </button>
 
-      {user && (
-        <div style={{ marginTop: "auto", paddingTop: 16, borderTop: `1px solid ${theme.border}` }}>
-          <div style={{ fontSize: 12, color: theme.textMuted, marginBottom: 6 }}>{user.realName}</div>
-          <button
-            onClick={onLogout}
-            style={{ border: `1px solid ${theme.border}`, background: theme.surfaceAlt, color: theme.text, borderRadius: 6, padding: "4px 10px", fontSize: 12, cursor: "pointer" }}
-          >
-            Abmelden
-          </button>
-        </div>
-      )}
+      <div style={{ marginTop: "auto", paddingTop: 16, borderTop: `1px solid ${theme.border}` }}>
+        {user && (
+          <>
+            <div style={{ fontSize: 12, color: theme.textMuted, marginBottom: 6 }}>{user.realName}</div>
+            <button
+              onClick={onLogout}
+              style={{ border: `1px solid ${theme.border}`, background: theme.surfaceAlt, color: theme.text, borderRadius: 6, padding: "4px 10px", fontSize: 12, cursor: "pointer" }}
+            >
+              Abmelden
+            </button>
+          </>
+        )}
+        <VersionFooter />
+      </div>
     </aside>
   );
 }
