@@ -14,7 +14,13 @@ type View = { kind: "empty" } | { kind: "create" } | { kind: "season"; id: numbe
 export default function App() {
   const [seasons, setSeasons] = useState<SeasonSummary[]>([]);
   const [view, setView] = useState<View>({ kind: "empty" });
+  const [section, setSection] = useState("Übersicht");
   const [showSplash, setShowSplash] = useState(true);
+
+  function openSeason(id: number) {
+    setView({ kind: "season", id });
+    setSection("Übersicht");
+  }
 
   function reloadSeasons() {
     api.getSeasons().then(setSeasons).catch(console.error);
@@ -33,7 +39,9 @@ export default function App() {
             <Sidebar
               seasons={seasons}
               selectedId={view.kind === "season" ? view.id : null}
-              onSelect={(id) => setView({ kind: "season", id })}
+              activeSection={section}
+              onSelect={openSeason}
+              onSectionSelect={setSection}
               onCreateClick={() => setView({ kind: "create" })}
               onSettingsClick={() => setView({ kind: "settings" })}
               isSettingsActive={view.kind === "settings"}
@@ -46,7 +54,7 @@ export default function App() {
                 <CreateSeasonForm
                   onCreated={(id) => {
                     reloadSeasons();
-                    setView({ kind: "season", id });
+                    openSeason(id);
                   }}
                   onCancel={() => setView({ kind: "empty" })}
                 />
@@ -54,6 +62,7 @@ export default function App() {
               {view.kind === "season" && (
                 <SeasonView
                   seasonId={view.id}
+                  section={section}
                   user={user}
                   onDeleted={() => {
                     reloadSeasons();

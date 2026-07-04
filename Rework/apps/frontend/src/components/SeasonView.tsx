@@ -3,6 +3,7 @@ import { api } from "../api/client";
 import type { AuthUser } from "../api/client";
 import type { SeasonDetail } from "../types";
 import { OverviewTab } from "./OverviewTab";
+import { TeamsTab } from "./TeamsTab";
 import { MatchesTab } from "./MatchesTab";
 import { ShootersTab } from "./ShootersTab";
 import { DatesInfoTab } from "./DatesInfoTab";
@@ -10,16 +11,37 @@ import { ResponsibleTab } from "./ResponsibleTab";
 import { PdfExportButton } from "./PdfExportButton";
 import { theme } from "../theme";
 
-export function SeasonView({ seasonId, user, onDeleted }: { seasonId: number; user: AuthUser | null; onDeleted: () => void }) {
+// The per-season sections, shown as a sidebar sub-navigation under the
+// selected season (Sidebar reads the same list). "Verantwortliche" only
+// applies to central hosting (webservice users), so it's offered only when
+// a user is logged in.
+export function seasonSections(user: AuthUser | null): string[] {
+  return [
+    "Übersicht",
+    "Mannschaften",
+    "Wettkämpfe",
+    "Schützen/innen",
+    "Termine & Info",
+    ...(user ? ["Verantwortliche"] : []),
+    "PDF-Export",
+  ];
+}
+
+export function SeasonView({
+  seasonId,
+  section,
+  user,
+  onDeleted,
+}: {
+  seasonId: number;
+  section: string;
+  user: AuthUser | null;
+  onDeleted: () => void;
+}) {
   const [season, setSeason] = useState<SeasonDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<string>("Übersicht");
   const [refreshKey, setRefreshKey] = useState(0);
   const [deleting, setDeleting] = useState(false);
-
-  // "Verantwortliche" only applies to central hosting (webservice users),
-  // so it's only offered when a user is logged in.
-  const tabs = ["Übersicht", "Wettkämpfe", "Schützen/innen", "Termine & Info", ...(user ? ["Verantwortliche"] : [])];
 
   async function handleDelete() {
     if (!season) return;
@@ -34,19 +56,17 @@ export function SeasonView({ seasonId, user, onDeleted }: { seasonId: number; us
     }
   }
 
-  // On season switch: show the loading state and reset to the first tab.
+  // On season switch: show the loading state.
   useEffect(() => {
     setSeason(null);
-    setTab("Übersicht");
     api
       .getSeason(seasonId)
       .then(setSeason)
       .catch((err) => setError(err.message));
   }, [seasonId]);
 
-  // On an in-place refresh (a save in one of the tabs): refetch without
-  // nulling the season or resetting the tab, so the user stays where they
-  // were instead of being bounced back to "Übersicht".
+  // In-place refresh after a save: refetch without nulling the season, so
+  // the user stays in the section they were working in.
   useEffect(() => {
     if (refreshKey === 0) return;
     api
@@ -59,48 +79,35 @@ export function SeasonView({ seasonId, user, onDeleted }: { seasonId: number; us
   if (error) return <p style={{ color: theme.danger }}>{error}</p>;
   if (!season) return <p style={{ color: theme.textMuted }}>Lädt…</p>;
 
+  const refresh = () => setRefreshKey((k) => k + 1);
+
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
         <h1 style={{ fontSize: 20, fontWeight: 600, margin: 0 }}>
           Saison {season.year} · {season.label}
         </h1>
-        <div style={{ display: "flex", gap: 8 }}>
-          <PdfExportButton seasonId={season.id} seasonLabel={`${season.label} ${season.year}`} />
-          <button
-            onClick={handleDelete}
-            disabled={deleting}
-            style={{ border: `1px solid ${theme.danger}`, background: "transparent", color: theme.danger, borderRadius: 6, padding: "6px 12px", fontSize: 13, cursor: "pointer" }}
-          >
-            {deleting ? "Löscht…" : "Saison löschen"}
-          </button>
-        </div>
-      </div>
-      <div style={{ display: "flex", gap: 4, borderBottom: `1px solid ${theme.border}`, marginBottom: 20 }}>
-        {tabs.map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            style={{
-              border: "none",
-              background: "transparent",
-              padding: "8px 16px",
-              fontSize: 13,
-              cursor: "pointer",
-              color: t === tab ? theme.text : theme.textMuted,
-              borderBottom: t === tab ? `2px solid ${theme.green}` : "2px solid transparent",
-            }}
-          >
-            {t}
-          </button>
-        ))}
+        <button
+          onClick={handleDelete}
+          disabled={deleting}
+          style={{ border: `1px solid ${theme.danger}`, background: "transparent", color: theme.danger, borderRadius: 6, padding: "6px 12px", fontSize: 13, cursor: "pointer" }}
+        >
+          {deleting ? "Löscht…" : "Saison löschen"}
+        </button>
       </div>
 
-      {tab === "Übersicht" && <OverviewTab season={season} onTeamUpdated={() => setRefreshKey((k) => k + 1)} />}
-      {tab === "Wettkämpfe" && <MatchesTab season={season} onMatchSaved={() => setRefreshKey((k) => k + 1)} />}
-      {tab === "Schützen/innen" && <ShootersTab seasonId={season.id} />}
-      {tab === "Termine & Info" && <DatesInfoTab season={season} onUpdated={() => setRefreshKey((k) => k + 1)} />}
-      {tab === "Verantwortliche" && <ResponsibleTab seasonId={season.id} teams={season.teams} />}
+      {section === "Übersicht" && <OverviewTab season={season} />}
+      {section === "Mannschaften" && <TeamsTab season={season} onTeamUpdated={refresh} />}
+      {section === "Wettkämpfe" && <MatchesTab season={season} onMatchSaved={refresh} />}
+      {section === "Schützen/innen" && <ShootersTab seasonId={season.id} />}
+      {section === "Termine & Info" && <DatesInfoTab season={season} onUpdated={refresh} />}
+      {section === "Verantwortliche" && user && <ResponsibleTab seasonId={season.id} teams={season.teams} />}
+      {section === "PDF-Export" && (
+        <div>
+          <h2 style={{ fontSize: 15, fontWeight: 600, marginBottom: 12 }}>PDF-Export</h2>
+          <PdfExportButton seasonId={season.id} seasonLabel={`${season.label} ${season.year}`} />
+        </div>
+      )}
     </div>
   );
 }

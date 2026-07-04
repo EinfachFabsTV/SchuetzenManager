@@ -17,7 +17,7 @@ export function setToken(token: string | null) {
 // Tauri's own webview origin, not from the backend's HTTP server, so
 // requests have to target the sidecar backend explicitly instead -
 // see TECHNICAL.md's "Tauri-Sidecar" section for why.
-const API_BASE = "__TAURI_INTERNALS__" in window ? "http://localhost:3001/api" : "/api";
+export const API_BASE = "__TAURI_INTERNALS__" in window ? "http://localhost:3001/api" : "/api";
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const token = getToken();
@@ -67,6 +67,7 @@ export const api = {
       additionalGuestShoots?: ShootFormRow[];
     },
   ) => request<Match>(`/matches/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  updateMatchWeek: (id: number, week: number) => request<Match>(`/matches/${id}/week`, { method: "PATCH", body: JSON.stringify({ week }) }),
   updateTeam: (id: number, data: NewTeamInput) => request<Team>(`/teams/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   getAuthStatus: () => request<{ enabled: boolean }>("/auth/status"),
   login: (email: string, password: string) =>

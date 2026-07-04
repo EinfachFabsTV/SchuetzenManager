@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { API_BASE } from "../api/client";
 import { theme } from "../theme";
 
 const SECTIONS = [
@@ -22,7 +23,9 @@ export function PdfExportButton({ seasonId, seasonLabel }: { seasonId: number; s
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/seasons/${seasonId}/pdf?sections=${sections.join(",")}`);
+      // API_BASE (not a relative "/api") so this hits the sidecar backend
+      // in the desktop app instead of the Tauri webview origin.
+      const res = await fetch(`${API_BASE}/seasons/${seasonId}/pdf?sections=${sections.join(",")}`);
       if (!res.ok) throw new Error(`PDF-Export fehlgeschlagen (${res.status})`);
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
