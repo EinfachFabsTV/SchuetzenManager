@@ -90,6 +90,15 @@ Die fertige App gibt es unter **[→ Releases](../../releases/latest)**. Du brau
 - **Debian/Ubuntu:** `.deb` laden und installieren — `sudo dpkg -i SchutzenManager_*_amd64.deb`
 - **Andere Distributionen:** `.AppImage` laden, ausführbar machen (`chmod +x SchutzenManager_*.AppImage`) und starten.
 
+### Automatische Updates
+
+Ab diesem Release prüft die App beim Start (während der Ladeanimation) im Hintergrund, ob auf GitHub eine neuere Version vorliegt, und bietet sie an:
+
+- **Optional** (Standard): ein Hinweis mit „Jetzt aktualisieren" / „Später".
+- **Pflicht**: enthält die Release-Beschreibung den Marker **`[pflicht]`**, erscheint ein deutlicher, nicht wegklickbarer Hinweis (die App bleibt trotzdem nutzbar).
+
+Ein Update lädt und installiert die neue Version und startet die App neu. **Deine Daten gehen dabei nie verloren** — die (verschlüsselte) Datenbank liegt in deinem Benutzerprofil und wird vom Installer nicht angefasst; zusätzlich hält die App bei jedem Entsperren eine Sicherungskopie der letzten funktionierenden Datenbank vor.
+
 ### „Unbekannter Herausgeber" — ist das sicher?
 
 Ja. Die App ist [quelloffen (Open Source)](../../) und wird automatisch aus diesem Repository gebaut. Windows zeigt die Warnung bei **jeder** App an, die nicht mit einem kostenpflichtigen Code-Signing-Zertifikat signiert ist — das sagt nichts über den Inhalt aus. Wer ganz sichergehen will, kann die App auch selbst aus dem Quellcode bauen (siehe [TECHNICAL.md](TECHNICAL.md#setup--lokal-ausführen)).
