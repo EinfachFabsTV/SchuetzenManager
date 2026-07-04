@@ -11,22 +11,6 @@ import { ResponsibleTab } from "./ResponsibleTab";
 import { PdfExportButton } from "./PdfExportButton";
 import { theme } from "../theme";
 
-// The per-season sections, shown as a sidebar sub-navigation under the
-// selected season (Sidebar reads the same list). "Verantwortliche" only
-// applies to central hosting (webservice users), so it's offered only when
-// a user is logged in.
-export function seasonSections(user: AuthUser | null): string[] {
-  return [
-    "Übersicht",
-    "Mannschaften",
-    "Wettkämpfe",
-    "Schützen/innen",
-    "Termine & Info",
-    ...(user ? ["Verantwortliche"] : []),
-    "PDF-Export",
-  ];
-}
-
 export function SeasonView({
   seasonId,
   section,

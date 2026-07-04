@@ -1,6 +1,6 @@
 import type { SeasonSummary } from "../types";
 import type { AuthUser } from "../api/client";
-import { seasonSections } from "./SeasonView";
+import { seasonSections } from "./seasonSections";
 import { theme } from "../theme";
 
 type Props = {
