@@ -27,13 +27,29 @@ export function PdfExportButton({ seasonId, seasonLabel }: { seasonId: number; s
       // in the desktop app instead of the Tauri webview origin.
       const res = await fetch(`${API_BASE}/seasons/${seasonId}/pdf?sections=${sections.join(",")}`);
       if (!res.ok) throw new Error(`PDF-Export fehlgeschlagen (${res.status})`);
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${seasonLabel}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
+      const buffer = await res.arrayBuffer();
+      const fileName = `${seasonLabel}.pdf`;
+
+      if ("__TAURI_INTERNALS__" in window) {
+        // Desktop: native "Speichern unter" dialog + write via a Rust
+        // command. A browser <a download> in the Tauri webview can't choose
+        // a folder and may be blocked entirely.
+        const { save } = await import("@tauri-apps/plugin-dialog");
+        const path = await save({ defaultPath: fileName, filters: [{ name: "PDF", extensions: ["pdf"] }] });
+        if (!path) {
+          setLoading(false);
+          return; // user cancelled the dialog
+        }
+        const { invoke } = await import("@tauri-apps/api/core");
+        await invoke("save_pdf", { path, bytes: Array.from(new Uint8Array(buffer)) });
+      } else {
+        const url = URL.createObjectURL(new Blob([buffer], { type: "application/pdf" }));
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
       setOpen(false);
     } catch (err) {
       setError((err as Error).message);

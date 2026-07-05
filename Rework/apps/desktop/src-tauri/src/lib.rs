@@ -93,19 +93,30 @@ fn start_backend_sidecar(app: &tauri::AppHandle, db_path: &Path) -> Result<Comma
     Ok(child)
 }
 
+// Writes bytes to a user-chosen path. Used by the PDF export's "Speichern
+// unter" flow: the frontend picks the path via the dialog plugin, fetches
+// the PDF bytes from the sidecar, and hands them here to write. Keeping the
+// write in a small command avoids wrangling the fs plugin's path scopes.
+#[tauri::command]
+fn save_pdf(path: String, bytes: Vec<u8>) -> Result<(), String> {
+    std::fs::write(&path, bytes).map_err(|e| format!("Konnte PDF nicht speichern: {e}"))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_dialog::init())
         .manage(SidecarState(Mutex::new(None)))
         .manage(vault::VaultState::new())
         .invoke_handler(tauri::generate_handler![
             vault::vault_status,
             vault::vault_setup,
             vault::vault_unlock,
-            vault::vault_change_password
+            vault::vault_change_password,
+            save_pdf
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {

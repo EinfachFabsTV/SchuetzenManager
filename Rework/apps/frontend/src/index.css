@@ -1,0 +1,120 @@
+/* Global polish for the dark desktop UI. The components use inline styles;
+   this layer adds the cross-cutting quality touches (focus rings, hover
+   transitions, tabular figures, dark scrollbars, font smoothing) without a
+   CSS framework and without editing every component. */
+
+:root {
+  color-scheme: dark;
+  --sm-focus: #7bc4a0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  background: #202220;
+  color: #e9ebe4;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Numbers in tables/inputs line up in columns and don't jitter. */
+td,
+th,
+input {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Consistent, smooth interaction feedback everywhere. */
+button,
+input,
+select,
+textarea,
+a {
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease;
+}
+
+button:not(:disabled) {
+  cursor: pointer;
+}
+
+/* Hover feedback for any button, on top of its inline background. */
+button:not(:disabled):hover {
+  filter: brightness(1.08);
+}
+
+button:not(:disabled):active {
+  filter: brightness(0.96);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Inputs/selects get a clear green focus ring; matches the brand accent. */
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--sm-focus) !important;
+  box-shadow: 0 0 0 2px rgba(123, 196, 160, 0.25);
+}
+
+/* Keyboard focus visible on all interactive elements (accessibility). */
+:focus-visible {
+  outline: 2px solid var(--sm-focus);
+  outline-offset: 2px;
+}
+button:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Table rows: subtle hover so long lists are easy to track. */
+tbody tr:hover td {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+::selection {
+  background: rgba(90, 161, 125, 0.4);
+}
+
+/* Dark, slim scrollbars instead of the bright OS default. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #4a4c45 transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #3c3e38;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: #55574f;
+  background-clip: content-box;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation-duration: 0.001ms !important;
+  }
+}
