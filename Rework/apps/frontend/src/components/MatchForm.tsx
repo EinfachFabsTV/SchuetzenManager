@@ -112,7 +112,7 @@ export function MatchForm({ match, onSaved, onCancel }: { match: Match; onSaved:
   }
 
   return (
-    <div style={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 12, padding: 20, maxWidth: 720 }}>
+    <div style={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 12, padding: 20, width: "100%", maxWidth: 1100 }}>
       <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 10 }}>{match.homeTeam.name}</h3>
       <ShootRows rows={homeShoots} onChange={setHomeShoots} />
       <div style={{ fontSize: 12, fontWeight: 600, margin: "8px 0" }}>Zusätzliche Schützen/innen</div>

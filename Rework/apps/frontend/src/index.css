@@ -36,6 +36,17 @@ input {
   font-variant-numeric: tabular-nums;
 }
 
+/* Let form controls shrink inside grid/flex layouts instead of forcing
+   horizontal overflow (grid/flex items default to min-width: auto). This
+   is what keeps the multi-column shooter entry grid inside its card as the
+   window narrows, and prevents any input from pushing the layout wider. */
+input,
+select,
+textarea {
+  min-width: 0;
+  max-width: 100%;
+}
+
 /* Consistent, smooth interaction feedback everywhere. */
 button,
 input,

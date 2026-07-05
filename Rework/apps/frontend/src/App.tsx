@@ -50,7 +50,7 @@ export default function App() {
               user={user}
               onLogout={onLogout}
             />
-            <main style={{ flex: 1, padding: "24px 32px" }}>
+            <main style={{ flex: 1, minWidth: 0, padding: "24px 32px" }}>
               {view.kind === "empty" && <p style={{ color: theme.textMuted }}>Wähle eine Saison aus oder lege eine neue an.</p>}
               {view.kind === "create" && (
                 <CreateSeasonForm
