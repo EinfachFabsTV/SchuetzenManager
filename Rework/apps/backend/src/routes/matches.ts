@@ -109,4 +109,29 @@ export const matchesRoutes: FastifyPluginAsync = async (app) => {
       include: { shoots: true, homeTeam: true, guestTeam: true },
     });
   });
+
+  // Rescheduling a match to a different week (drag-and-drop in the
+  // Wettkämpfe tab). Week has no upper bound tied to matchDates - a season
+  // can freely grow an extra week this way, same as the legacy app allowed
+  // via WeekToDate.
+  app.patch<{ Params: { id: string }; Body: { week: number } }>("/matches/:id/week", { preHandler: requireAuth }, async (request, reply) => {
+    const matchId = Number(request.params.id);
+    const { week } = request.body;
+    if (!Number.isInteger(week) || week < 1) {
+      reply.code(400);
+      return { error: "Ungültige Woche." };
+    }
+
+    const match = await prisma.match.findUnique({ where: { id: matchId } });
+    if (!match) {
+      reply.code(404);
+      return { error: "Match nicht gefunden." };
+    }
+
+    return prisma.match.update({
+      where: { id: matchId },
+      data: { week },
+      include: { shoots: true, homeTeam: true, guestTeam: true },
+    });
+  });
 };
