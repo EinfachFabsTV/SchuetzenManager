@@ -116,6 +116,7 @@ pub fn run() {
             vault::vault_setup,
             vault::vault_unlock,
             vault::vault_change_password,
+            vault::vault_reset,
             save_pdf
         ])
         .setup(|app| {

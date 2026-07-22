@@ -3,6 +3,7 @@ import { api } from "../api/client";
 import type { AuthUser } from "../api/client";
 import { theme } from "../theme";
 import { ChangePasswordForm } from "./ChangePasswordForm";
+import { VaultResetPanel } from "./VaultResetPanel";
 
 type Props = { user: AuthUser | null };
 
@@ -44,6 +45,20 @@ export function SettingsPage({ user }: Props) {
         </div>
       )}
       {user && <UserManagementSection />}
+      {isTauri() && (
+        <div style={{ ...cardStyle, borderColor: theme.danger }}>
+          <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 8, color: theme.danger }}>Gefahrenzone</h3>
+          <p style={{ fontSize: 13, color: theme.textMuted, margin: 0 }}>
+            Setzt den Tresor zurück und startet die Ersteinrichtung neu. Die bisherigen Daten werden dabei
+            verschlüsselt in einen Sicherungsordner verschoben.
+          </p>
+          {/* vault_reset stops the backend sidecar, so there is no usable
+              app state left to return to - reloading sends the whole UI
+              back through VaultGate, which now finds no vault and starts
+              first-run setup. */}
+          <VaultResetPanel onReset={() => window.location.reload()} />
+        </div>
+      )}
     </div>
   );
 }

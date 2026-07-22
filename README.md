@@ -79,6 +79,7 @@ Die fertige App gibt es unter **[→ Releases](../../releases/latest)**. Du brau
    - Dann erscheint der Button **„Trotzdem ausführen"** — darauf klicken.
    - *(Je nach Windows-Version stehen „Trotzdem ausführen" / „Nicht ausführen" auch direkt da — dann einfach „Trotzdem ausführen".)*
 4. Den Installationsassistenten mit **„Weiter" / „Installieren"** durchklicken.
+   - Ist bereits eine ältere Version mit Daten vorhanden, fragt der Installer, ob die **vorhandenen Saisondaten behalten** werden sollen. Im Normalfall hier **„Ja"** wählen — „Nein" beginnt bei null (die alten Daten werden dabei nicht gelöscht, sondern verschlüsselt in einen Sicherungsordner verschoben).
 5. Die App über das **Startmenü** starten (nach „SchützenManager" suchen).
 6. **Beim allerersten Start** legst du ein **Passwort** fest und bekommst einen **Wiederherstellungscode** angezeigt. Damit wird deine lokale Datenbank verschlüsselt.
    > ⚠️ **Den Wiederherstellungscode unbedingt notieren und sicher aufbewahren.** Er ist die einzige Möglichkeit, wieder an deine Daten zu kommen, falls du das Passwort vergisst. Es gibt keine Hintertür.
@@ -98,6 +99,23 @@ Ab diesem Release prüft die App beim Start (während der Ladeanimation) im Hint
 - **Pflicht**: enthält die Release-Beschreibung den Marker **`[pflicht]`**, erscheint ein deutlicher, nicht wegklickbarer Hinweis (die App bleibt trotzdem nutzbar).
 
 Ein Update lädt und installiert die neue Version und startet die App neu. **Deine Daten gehen dabei nie verloren** — die (verschlüsselte) Datenbank liegt in deinem Benutzerprofil und wird vom Installer nicht angefasst; zusätzlich hält die App bei jedem Entsperren eine Sicherungskopie der letzten funktionierenden Datenbank vor.
+
+### Passwort und Wiederherstellungscode verloren
+
+Sind **beide** verloren, lassen sich die gespeicherten Daten nicht mehr öffnen. Das ist keine Einstellung, die sich umlegen ließe: Die Datenbank ist verschlüsselt, und ohne Passwort oder Wiederherstellungscode existiert kein Schlüssel — auch nicht für die Entwickler.
+
+Du kannst aber jederzeit **neu anfangen**: Auf dem Anmeldebildschirm führt „Zugang verloren?" zum Zurücksetzen, ebenso der Bereich „Gefahrenzone" unter *Einstellungen*. Zur Sicherheit muss dort das Wort `Bestätigen` eingetippt werden.
+
+Dabei wird nichts gelöscht: Die alten Daten wandern verschlüsselt in einen Ordner `reset-backup-<Datum>` neben der Datenbank. Taucht dein Wiederherstellungscode später doch noch auf, sind sie damit vollständig zu retten. Verwahre den Code deshalb am besten ausgedruckt.
+
+### Programm lässt sich nicht deinstallieren
+
+Ältere Versionen (bis v0.1.2) konnten einen Hintergrundprozess zurücklassen, der Dateien offen hält — Windows bricht die Deinstallation dann ab und entfernt die App trotzdem aus „Apps & Features", sodass Reste liegen bleiben. Ab v0.1.5 beendet der Installer diese Prozesse selbst.
+
+Steckst du auf einer alten Version fest, hilft ein Neustart des Rechners (danach ist nichts mehr gesperrt) und anschließend das Löschen dieser beiden Ordner:
+
+- `%LOCALAPPDATA%\SchützenManager` — das Programm
+- `%APPDATA%\de.schuetzenmanager.desktop` — die Daten (**enthält deine Saisondaten**, vorher sichern, falls du sie noch brauchst)
 
 ### „Unbekannter Herausgeber" — ist das sicher?
 

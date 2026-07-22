@@ -20,7 +20,7 @@ use std::fs;
 use std::net::TcpStream;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use aes_gcm::aead::{Aead, KeyInit, Payload};
 use aes_gcm::{Aes256Gcm, Key, Nonce};
@@ -36,6 +36,22 @@ const SALT_LEN: usize = 16;
 const NONCE_LEN: usize = 12;
 const RECOVERY_CODE_BYTES: usize = 20;
 const BACKEND_PORT: u16 = 3001;
+
+// Prefix of the folder a reset moves the old vault into. Also read by the
+// NSIS installer hooks, which reproduce this naming when the user chooses
+// to reset during a manual install - keep the two in sync.
+const RESET_BACKUP_PREFIX: &str = "reset-backup-";
+
+// The vault files a reset moves aside, in the order they are moved. The
+// plaintext database.db is included because a hard kill can leave one
+// behind (see reencrypt_on_exit).
+const VAULT_FILE_NAMES: [&str; 5] = [
+    "database.db.enc",
+    "vault.json",
+    "database.db.enc.bak",
+    "vault.json.bak",
+    "database.db",
+];
 
 // argon2id, tuned for a once-per-launch human-facing operation, not a hot
 // path. m=19MiB/t=2/p=1 is RFC 9106's second recommended option / OWASP's
@@ -446,6 +462,135 @@ pub fn vault_change_password(app: tauri::AppHandle, current_secret: String, new_
     Ok(())
 }
 
+// Converts a day count since the Unix epoch into a civil (year, month,
+// day). This is Howard Hinnant's well-known days-from-civil inverse; it is
+// here so the one place that needs a human-readable timestamp doesn't drag
+// a whole date crate into the dependency tree. Backup folder names are
+// read by people deciding which copy to keep, so a bare epoch number would
+// be a poor trade.
+fn civil_from_days(days: i64) -> (i64, u32, u32) {
+    let z = days + 719_468;
+    let era = if z >= 0 { z } else { z - 146_096 } / 146_097;
+    let doe = (z - era * 146_097) as i64;
+    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
+    let y = yoe + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = (doy - (153 * mp + 2) / 5 + 1) as u32;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 } as u32;
+    (if m <= 2 { y + 1 } else { y }, m, d)
+}
+
+/// UTC timestamp as `YYYY-MM-DD-HHMMSS`, used to name a reset backup folder.
+fn format_timestamp(now: SystemTime) -> String {
+    // A clock before the epoch would be nonsense here; falling back to 0
+    // still yields a usable (if wrong) folder name rather than failing a
+    // reset the user urgently needs.
+    let secs = now.duration_since(UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0) as i64;
+    let (y, m, d) = civil_from_days(secs.div_euclid(86_400));
+    let tod = secs.rem_euclid(86_400);
+    format!(
+        "{y:04}-{m:02}-{d:02}-{:02}{:02}{:02}",
+        tod / 3600,
+        (tod % 3600) / 60,
+        tod % 60
+    )
+}
+
+/// Moves one file, tolerating the two ways this realistically fails: the
+/// destination being on another volume (rename can't cross filesystems),
+/// and the file still being held open for a moment by the just-killed
+/// sidecar - the same race reencrypt_on_exit already retries around.
+fn move_file(src: &Path, dst: &Path) -> Result<(), String> {
+    let mut last_err = None;
+    for attempt in 0..10 {
+        if fs::rename(src, dst).is_ok() {
+            return Ok(());
+        }
+        match fs::copy(src, dst).and_then(|_| fs::remove_file(src)) {
+            Ok(()) => return Ok(()),
+            Err(e) => {
+                last_err = Some(e);
+                if attempt < 9 {
+                    std::thread::sleep(Duration::from_millis(100));
+                }
+            }
+        }
+    }
+    Err(format!(
+        "Konnte {} nicht sichern: {}",
+        src.display(),
+        last_err.map(|e| e.to_string()).unwrap_or_default()
+    ))
+}
+
+/// Moves the vault aside into a fresh timestamped backup folder and returns
+/// that folder. Deliberately moves rather than deletes: for a locked-out
+/// user the data is unreadable but not worthless - if the recovery code
+/// turns up later, everything here is still recoverable.
+///
+/// Takes the directory and timestamp explicitly (rather than reading them
+/// from an AppHandle) so it can be unit-tested without a running app.
+fn move_vault_aside(app_data_dir: &Path, timestamp: &str) -> Result<PathBuf, String> {
+    // Only one generation is kept: a reset frees a user from a vault they
+    // can't open, it isn't a backup feature, and copies of an unopenable
+    // database shouldn't accumulate on disk forever.
+    if let Ok(entries) = fs::read_dir(app_data_dir) {
+        for entry in entries.flatten() {
+            if entry.file_name().to_string_lossy().starts_with(RESET_BACKUP_PREFIX) {
+                let _ = fs::remove_dir_all(entry.path());
+            }
+        }
+    }
+
+    let backup_dir = app_data_dir.join(format!("{RESET_BACKUP_PREFIX}{timestamp}"));
+    fs::create_dir_all(&backup_dir).map_err(|e| format!("Konnte Sicherungsordner nicht anlegen: {e}"))?;
+
+    for name in VAULT_FILE_NAMES {
+        let src = app_data_dir.join(name);
+        if src.exists() {
+            // A failure aborts and leaves everything else in place: a
+            // visibly half-done reset is recoverable, a silently mangled
+            // one is not.
+            move_file(&src, &backup_dir.join(name))?;
+        }
+    }
+    Ok(backup_dir)
+}
+
+/// Wipes the vault so the app returns to first-run setup, keeping the old
+/// (still encrypted) files in a backup folder whose path is returned.
+///
+/// This is the way back for someone who has lost both their password and
+/// their recovery code - without it, reinstalling doesn't help, since the
+/// uninstaller leaves the data directory in place and a fresh install finds
+/// the very same vault again.
+#[tauri::command]
+pub fn vault_reset(app: tauri::AppHandle) -> Result<String, String> {
+    let paths = resolve_vault_paths(&app)?;
+    let app_data_dir = paths
+        .vault_json
+        .parent()
+        .ok_or_else(|| "Datenverzeichnis nicht auffindbar.".to_string())?
+        .to_path_buf();
+
+    // Order matters, and getting it wrong loses the reset silently.
+    //
+    // The sidecar holds database.db open, and Windows refuses to move an
+    // open file. More subtly, VaultState still holds the DEK and the
+    // plaintext path: if it survived this call, reencrypt_on_exit would on
+    // shutdown write the database we just moved aside straight back out -
+    // undoing the reset without any error ever being shown.
+    if let Some(child) = app.state::<crate::SidecarState>().0.lock().unwrap().take() {
+        let _ = child.kill();
+    }
+    app.state::<VaultState>().0.lock().unwrap().take();
+
+    let backup_dir = move_vault_aside(&app_data_dir, &format_timestamp(SystemTime::now()))?;
+    log::info!("Tresor zurückgesetzt, Sicherung unter {}", backup_dir.display());
+    Ok(backup_dir.to_string_lossy().to_string())
+}
+
 /// Called from the RunEvent::Exit handler in lib.rs: re-encrypts the
 /// plaintext working copy and deletes it, so nothing sensitive remains on
 /// disk while the app isn't running. Best-effort - RunEvent::Exit can't
@@ -629,5 +774,96 @@ mod tests {
         let params = fast_params();
         let password_wrap = wrap_dek(&dek, "richtig", &params).unwrap();
         assert!(unwrap_dek(&password_wrap, "falsch", &params).is_err());
+    }
+
+    // vault_reset's filesystem core. The #[tauri::command] wrapper itself
+    // needs a real AppHandle (to stop the sidecar and clear VaultState), so
+    // these drive move_vault_aside directly - the same split the
+    // change_password tests above use.
+
+    fn reset_test_dir(name: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("schuetzenmanager-vault-test-{name}"));
+        fs::remove_dir_all(&dir).ok();
+        fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn reset_moves_every_vault_file_into_the_backup_folder() {
+        let dir = reset_test_dir("reset-moves");
+        for name in VAULT_FILE_NAMES {
+            fs::write(dir.join(name), format!("inhalt von {name}")).unwrap();
+        }
+
+        let backup = move_vault_aside(&dir, "2026-07-05-120000").unwrap();
+
+        for name in VAULT_FILE_NAMES {
+            assert!(!dir.join(name).exists(), "{name} sollte verschoben worden sein");
+            assert_eq!(
+                fs::read_to_string(backup.join(name)).unwrap(),
+                format!("inhalt von {name}"),
+                "{name} sollte unverändert in der Sicherung liegen"
+            );
+        }
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn reset_replaces_an_earlier_backup_so_only_one_generation_remains() {
+        let dir = reset_test_dir("reset-one-generation");
+        let stale = dir.join(format!("{RESET_BACKUP_PREFIX}2020-01-01-000000"));
+        fs::create_dir_all(&stale).unwrap();
+        fs::write(stale.join("vault.json"), "alte sicherung").unwrap();
+        fs::write(dir.join("vault.json"), "aktueller tresor").unwrap();
+
+        let backup = move_vault_aside(&dir, "2026-07-05-120000").unwrap();
+
+        assert!(!stale.exists(), "die ältere Sicherung sollte entfernt sein");
+        let backups: Vec<_> = fs::read_dir(&dir)
+            .unwrap()
+            .flatten()
+            .filter(|e| e.file_name().to_string_lossy().starts_with(RESET_BACKUP_PREFIX))
+            .collect();
+        assert_eq!(backups.len(), 1);
+        assert_eq!(fs::read_to_string(backup.join("vault.json")).unwrap(), "aktueller tresor");
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn reset_without_an_existing_vault_is_a_harmless_no_op() {
+        let dir = reset_test_dir("reset-empty");
+        let backup = move_vault_aside(&dir, "2026-07-05-120000").unwrap();
+        assert!(backup.exists(), "der Sicherungsordner wird auch dann angelegt");
+        assert_eq!(fs::read_dir(&backup).unwrap().count(), 0);
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn reset_skips_files_that_are_absent() {
+        // A vault that was never unlocked has no .bak files and no
+        // plaintext database.db - only the two primary files exist.
+        let dir = reset_test_dir("reset-partial");
+        fs::write(dir.join("vault.json"), "meta").unwrap();
+        fs::write(dir.join("database.db.enc"), "cipher").unwrap();
+
+        let backup = move_vault_aside(&dir, "2026-07-05-120000").unwrap();
+
+        assert_eq!(fs::read_to_string(backup.join("vault.json")).unwrap(), "meta");
+        assert_eq!(fs::read_to_string(backup.join("database.db.enc")).unwrap(), "cipher");
+        assert!(!backup.join("vault.json.bak").exists());
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn format_timestamp_renders_a_sortable_utc_stamp() {
+        // 2026-07-05T12:34:56Z as seconds since the epoch.
+        let stamp = format_timestamp(UNIX_EPOCH + Duration::from_secs(1_783_254_896));
+        assert_eq!(stamp, "2026-07-05-123456");
+        // The epoch itself, and a leap day, to pin the date maths down.
+        assert_eq!(format_timestamp(UNIX_EPOCH), "1970-01-01-000000");
+        assert_eq!(
+            format_timestamp(UNIX_EPOCH + Duration::from_secs(1_709_164_800)),
+            "2024-02-29-000000"
+        );
     }
 }

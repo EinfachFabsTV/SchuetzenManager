@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { VaultResetPanel } from "./VaultResetPanel";
 import { theme } from "../theme";
 
 const inputStyle: React.CSSProperties = {
@@ -67,7 +68,9 @@ export function VaultGate({ children }: { children: React.ReactNode }) {
     return <SetupScreen onUnlocked={() => setStatus("unlocked")} />;
   }
   if (status === "locked") {
-    return <UnlockScreen onUnlocked={() => setStatus("unlocked")} />;
+    // A reset leaves no vault behind, so the app continues into first-run
+    // setup rather than back to this screen.
+    return <UnlockScreen onUnlocked={() => setStatus("unlocked")} onReset={() => setStatus("setup")} />;
   }
   return <>{children}</>;
 }
@@ -156,7 +159,7 @@ function SetupScreen({ onUnlocked }: { onUnlocked: () => void }) {
   );
 }
 
-function UnlockScreen({ onUnlocked }: { onUnlocked: () => void }) {
+function UnlockScreen({ onUnlocked, onReset }: { onUnlocked: () => void; onReset: () => void }) {
   const [secret, setSecret] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [unlocking, setUnlocking] = useState(false);
@@ -186,6 +189,7 @@ function UnlockScreen({ onUnlocked }: { onUnlocked: () => void }) {
           {unlocking ? "Entsperre…" : "Entsperren"}
         </button>
       </form>
+      <VaultResetPanel onReset={onReset} />
     </Screen>
   );
 }
