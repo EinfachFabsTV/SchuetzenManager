@@ -1,6 +1,6 @@
 [package]
 name = "schuetzenmanager"
-version = "0.1.5"
+version = "0.2.0"
 description = "SchützenManager Desktop-Anwendung"
 authors = ["Fabian L."]
 license = ""

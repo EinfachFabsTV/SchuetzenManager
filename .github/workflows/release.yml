@@ -16,7 +16,8 @@ jobs:
     permissions:
       contents: write
     outputs:
-      release_id: ${{ steps.create.outputs.result }}
+      release_id: ${{ steps.create.outputs.release_id }}
+      release_body: ${{ steps.create.outputs.release_body }}
     steps:
       - name: Create draft release
         id: create
@@ -24,16 +25,35 @@ jobs:
         with:
           script: |
             const tag = context.ref.replace('refs/tags/', '');
+            // Per-tag release notes. The updater reads these from latest.json
+            // (see the releaseBody passed to tauri-action below) and treats a
+            // [pflicht] marker as a mandatory update. Only tags listed here are
+            // mandatory; every other release stays optional by default.
+            const NOTES = {
+              'v0.2.0':
+                '[pflicht] Pflicht-Update auf Version 0.2.0.\n\n' +
+                'Neu:\n' +
+                '- PDF-Spielplan im neuen Layout (Kopf mit Logo, Hin-/Rückrunde, Begegnungen spaltenweise)\n' +
+                '- Editierbarer PDF-Kopf + Logo in den Einstellungen (Logo bleibt auch nach Löschen des Bildordners erhalten)\n' +
+                '- Zweiter Wettkampftag (Gasttag) je Woche\n' +
+                '- Wettkämpfe-Ansicht umschaltbar (Woche ↔ Hin-/Rückrunde), Quick-Links, Verschieben zwischen Wochen\n' +
+                '- Alte Daten nach dem Zurücksetzen wieder einlesen\n' +
+                '- Geführte Programm-Tour, verständliche Fehlermeldungen, Support-Link\n\n' +
+                'Wichtig: bestehende Datenbanken werden beim ersten Start automatisch auf das neue Format aktualisiert. Deine Daten bleiben erhalten.',
+            };
+            const optional = 'Automatisch gebauter Release. Windows: NSIS-Setup (.exe) und ein portables ZIP. Linux: .deb und .AppImage.\n\nOptionale Aktualisierung. (Für ein Pflicht-Update den Marker [pflicht] in diese Beschreibung aufnehmen.)';
+            const body = NOTES[tag] ?? optional;
             const { data } = await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
               tag_name: tag,
               name: `SchützenManager ${tag}`,
-              body: 'Automatisch gebauter Release. Windows: NSIS-Setup (.exe) und ein portables ZIP. Linux: .deb und .AppImage.\n\nOptionale Aktualisierung. (Für ein Pflicht-Update den Marker [pflicht] in diese Beschreibung aufnehmen.)',
+              body,
               draft: true,
               prerelease: false,
             });
-            return data.id;
+            core.setOutput('release_id', data.id);
+            core.setOutput('release_body', body);
 
   build-tauri:
     needs: create-release
@@ -87,6 +107,9 @@ jobs:
         with:
           projectPath: Rework/apps/desktop
           releaseId: ${{ needs.create-release.outputs.release_id }}
+          # Also written into latest.json's "notes", where the in-app updater
+          # reads the [pflicht] marker to decide a mandatory update.
+          releaseBody: ${{ needs.create-release.outputs.release_body }}
 
       - name: Zip portable Windows build
         if: matrix.platform == 'windows-latest'
