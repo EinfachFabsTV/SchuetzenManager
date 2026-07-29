@@ -54,13 +54,14 @@ export function Sidebar({
         <strong style={{ color: theme.green, fontSize: 15 }}>SchützenManager</strong>
       </div>
       <button
+        data-tour="new-season"
         onClick={onCreateClick}
         style={{ width: "100%", marginBottom: 16, background: theme.green, color: theme.onAccent, border: "none", borderRadius: 8, padding: "8px 0", cursor: "pointer", fontSize: 13 }}
       >
         + Neue Saison
       </button>
 
-      <div style={label}>Saisons</div>
+      <div style={label} data-tour="season-list">Saisons</div>
       {seasons.length === 0 && <p style={{ fontSize: 12, color: theme.textMuted }}>Noch keine Saison.</p>}
       {seasons.map((season) => (
         <button
@@ -86,7 +87,7 @@ export function Sidebar({
       )}
 
       <div style={{ borderTop: `1px solid ${theme.border}`, margin: "16px 0" }} />
-      <button onClick={onSettingsClick} style={navItem(isSettingsActive)}>
+      <button data-tour="settings-nav" onClick={onSettingsClick} style={navItem(isSettingsActive)}>
         ⚙ Einstellungen
       </button>
 

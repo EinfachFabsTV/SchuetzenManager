@@ -8,6 +8,8 @@ import { LoginGate } from "./components/LoginGate";
 import { SplashScreen } from "./components/SplashScreen";
 import { SettingsPage } from "./components/SettingsPage";
 import { UpdateNotice } from "./components/UpdateNotice";
+import { Tour } from "./components/Tour";
+import { TOUR_STEPS, stepsToAutoRun, markTourSeen, type TourStep } from "./lib/tour";
 import { theme } from "./theme";
 
 type View = { kind: "empty" } | { kind: "create" } | { kind: "season"; id: number } | { kind: "settings" };
@@ -17,6 +19,22 @@ export default function App() {
   const [view, setView] = useState<View>({ kind: "empty" });
   const [section, setSection] = useState("Übersicht");
   const [showSplash, setShowSplash] = useState(true);
+  const [tourSteps, setTourSteps] = useState<TourStep[] | null>(null);
+
+  // Auto-run the tour once the splash is gone (targets are mounted by then):
+  // the whole tour on first launch, only new steps after an update. A replay
+  // from Settings dispatches "sm:start-tour" to show everything again.
+  useEffect(() => {
+    if (showSplash) return;
+    const steps = stepsToAutoRun();
+    if (steps.length > 0) setTourSteps(steps);
+  }, [showSplash]);
+
+  useEffect(() => {
+    const replay = () => setTourSteps(TOUR_STEPS);
+    window.addEventListener("sm:start-tour", replay);
+    return () => window.removeEventListener("sm:start-tour", replay);
+  }, []);
 
   function openSeason(id: number) {
     setView({ kind: "season", id });
@@ -75,6 +93,15 @@ export default function App() {
               )}
               {view.kind === "settings" && <SettingsPage user={user} />}
             </main>
+            {tourSteps && (
+              <Tour
+                steps={tourSteps}
+                onFinish={() => {
+                  markTourSeen();
+                  setTourSteps(null);
+                }}
+              />
+            )}
           </div>
         )}
       </LoginGate>

@@ -37,6 +37,19 @@ export function SettingsPage({ user }: Props) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
       <h1 style={{ fontSize: 20, fontWeight: 600, margin: 0 }}>Einstellungen</h1>
+      <div style={cardStyle}>
+        <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 8, color: theme.text }}>Programm-Tour</h3>
+        <p style={{ fontSize: 12, color: theme.textMuted, marginTop: 0, marginBottom: 14 }}>
+          Die geführte Einführung noch einmal durchlaufen.
+        </p>
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new Event("sm:start-tour"))}
+          style={{ border: `1px solid ${theme.border}`, background: theme.surfaceAlt, color: theme.text, borderRadius: 6, padding: "8px 16px", fontSize: 13, cursor: "pointer" }}
+        >
+          Tour wiederholen
+        </button>
+      </div>
       <PdfHeaderSection />
       {isTauri() && <VaultPasswordSection />}
       {isTauri() && <VaultRestoreSection />}
