@@ -125,6 +125,40 @@ Ja. Die App ist [quelloffen (Open Source)](../../) und wird automatisch aus dies
 
 Für den optionalen zentral gehosteten Betrieb (mehrere Vereine, Web-Zugriff) gibt es ein eigenständiges **Docker-Image** unter `ghcr.io/einfachfabstv/schuetzenmanager-server` (eigener `server-v*`-Release-Kanal). Details: [TECHNICAL.md](TECHNICAL.md).
 
+## Erste Schritte (Tutorial)
+
+Eine geführte **Programm-Tour** startet automatisch beim ersten Öffnen und
+erklärt alles direkt in der App (später jederzeit über *Einstellungen →
+Programm-Tour* wiederholbar). Kurzfassung zum Nachlesen:
+
+1. **Passwort festlegen (nur Desktop).** Beim allerersten Start vergibst du ein
+   Passwort und erhältst einen Wiederherstellungscode. Beides notieren — ohne
+   eines von beiden sind die verschlüsselten Daten nicht mehr zu öffnen.
+2. **Neue Saison anlegen.** Sidebar → **+ Neue Saison**: Jahr, Bezeichnung (z.B.
+   „LG - Auflage D") und die Mannschaften eintragen. Der komplette Spielplan mit
+   Hin- und Rückrunde wird automatisch erzeugt. Optional lässt sich hier ein
+   eigener PDF-Kopf nur für diese Saison setzen.
+3. **Ergebnisse erfassen.** Bereich **Wettkämpfe** → ein Match anklicken und die
+   Ringe je Schütze eintragen. Oben rechts schaltest du zwischen **Woche** und
+   **Hin-/Rückrunde** um; Begegnungen lassen sich per Ziehen in eine andere
+   Woche verschieben. Tabelle und Einzelwertung aktualisieren sich sofort.
+4. **Termine & Mannschaften.** Unter **Termine & Info** trägst du je
+   Wettkampfwoche einen **Heim- und optional einen Gasttag** ein; unter
+   **Übersicht** pflegst du Trainingszeiten und Kontaktdaten der Mannschaften.
+5. **PDF-Kopf einrichten.** **Einstellungen → PDF-Kopf**: zwei Textzeilen
+   (Vereinsname, Website) und ein **Logo**. Das Logo wird in der Datenbank
+   gespeichert — du kannst die Bilddatei danach löschen, es bleibt erhalten.
+6. **PDF exportieren.** Bereich **PDF-Export** → Abschnitte wählen und über
+   „Speichern unter" ablegen. Der Spielplan erscheint im gewohnten
+   Meppen-Layout (Kopf mit Logo, Hin-/Rückrunde, Begegnungen spaltenweise,
+   Kontakttabelle). Ein echtes Beispiel liegt unter
+   [docs/images/beispiel-spielplan.pdf](docs/images/beispiel-spielplan.pdf).
+
+> **Passwort/Code verloren?** Auf dem Anmeldebildschirm führt „Zugang verloren?"
+> zum Zurücksetzen (die alten Daten werden verschlüsselt gesichert). Findest du
+> den Code später wieder, holst du die Daten über *Einstellungen → Alte Daten
+> wiederherstellen* zurück.
+
 ## Lizenz / Copyright
 
 Der ursprüngliche Java-Code (© Christian Kater) steht unter der in [LICENSE](LICENSE) genannten Lizenz. Logo und Rework-Markenzeichen: © 2026 Fabian L.
