@@ -74,12 +74,17 @@ export function Sidebar({
       ))}
 
       {selectedSeason && !isSettingsActive && (
-        <div style={{ marginTop: 16 }}>
+        <div style={{ marginTop: 16 }} data-tour="season-sections">
           <div style={{ ...label, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             Saison {selectedSeason.year} · {selectedSeason.label}
           </div>
           {seasonSections(user).map((s) => (
-            <button key={s} onClick={() => onSectionSelect(s)} style={{ ...navItem(s === activeSection), paddingLeft: 16 }}>
+            <button
+              key={s}
+              data-tour={`nav-${s}`}
+              onClick={() => onSectionSelect(s)}
+              style={{ ...navItem(s === activeSection), paddingLeft: 16 }}
+            >
               {s}
             </button>
           ))}

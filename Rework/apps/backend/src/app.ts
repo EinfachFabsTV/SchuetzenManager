@@ -47,14 +47,36 @@ export async function buildApp(options?: { logger?: boolean }) {
   // routes already reply with reply.code(...) + { error: "..." }; this is
   // the safety net for the unexpected rest, so the frontend (which reads
   // body.error) always has something meaningful to show on a failed save.
-  // Internal details are logged, never leaked to the client.
+  //
+  // The message is deliberately DETAILED: this runs as a local sidecar for a
+  // single desktop user, not a public multi-tenant server, so hiding the
+  // cause only makes bug reports useless. The user gets what actually went
+  // wrong plus which request caused it, so it can be pasted straight into a
+  // report via the "Fehler melden" link. Stack traces stay in the log.
   app.setErrorHandler((error: FastifyError, request, reply) => {
     request.log.error(error);
     const status = typeof error.statusCode === "number" && error.statusCode >= 400 && error.statusCode < 600 ? error.statusCode : 500;
-    // 4xx (e.g. schema validation) carry a useful message; 5xx must not
-    // expose internals, so they get a generic, actionable German text.
-    const message = status < 500 ? error.message || "Ungültige Anfrage." : "Beim Verarbeiten ist ein unerwarteter Fehler aufgetreten. Bitte versuche es erneut.";
-    reply.code(status).send({ error: message });
+
+    if (status < 500) {
+      reply.code(status).send({ error: error.message || "Ungültige Anfrage." });
+      return;
+    }
+
+    // Prisma surfaces its own codes (P2002 unique violation, P2025 not found,
+    // ...) which are the single most useful clue when something breaks.
+    const code = (error as { code?: string }).code;
+    // Prisma prefixes its messages with a multi-line source excerpt of the
+    // failing call. That's noise for a club user - keep the last meaningful
+    // line (the actual cause) and drop the code listing.
+    const lines = (error.message || String(error))
+      .split("\n")
+      .map((l) => l.trim())
+      .filter((l) => l && !/^\d+\s|^→|^Invalid `|^\{|^\}/.test(l));
+    const cause = lines[lines.length - 1] || "Unbekannte Ursache";
+    const details = [cause, code ? `Code: ${code}` : null, `${request.method} ${request.url}`].filter(Boolean).join(" · ");
+    reply.code(status).send({
+      error: `Unerwarteter Fehler: ${details}. Bitte melde diesen Text über „Fehler melden“, wenn er erneut auftritt.`,
+    });
   });
 
   app.get("/health", async () => ({ status: "ok" }));

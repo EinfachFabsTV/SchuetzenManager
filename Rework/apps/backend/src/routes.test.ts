@@ -403,6 +403,26 @@ test("a competition week can carry a second (guest) date", async () => {
   assert.equal(week1.dateGuest, "2025-09-21");
 });
 
+test("an unexpected server error is reported with its actual cause, not a generic text", async () => {
+  // Two teams with the same name violate the (seasonId, name) unique index -
+  // a genuine unhandled Prisma error, so it goes through the global handler.
+  const res = await app.inject({
+    method: "POST",
+    url: "/api/seasons",
+    headers: { authorization: `Bearer ${token}` },
+    payload: { year: 2099, label: "Doppelt", teams: [{ name: "Gleich" }, { name: "Gleich" }] },
+  });
+  assert.equal(res.statusCode, 500);
+  const { error } = res.json();
+  // The cause, the Prisma code and the offending request must all be there,
+  // so the text can be pasted straight into a bug report.
+  assert.match(error, /Unique constraint failed/);
+  assert.match(error, /P2002/);
+  assert.match(error, /POST \/api\/seasons/);
+  // ...but not Prisma's multi-line source excerpt.
+  assert.ok(!error.includes("prisma.team.create()"), "source excerpt should be stripped");
+});
+
 test("deleting the season removes it (DELETE without a body must not 400)", async () => {
   const res = await app.inject({
     method: "DELETE",

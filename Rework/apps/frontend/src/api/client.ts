@@ -21,18 +21,44 @@ export const API_BASE = "__TAURI_INTERNALS__" in window ? "http://localhost:3001
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const token = getToken();
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: {
-      // Fastify 5 rejects a request that declares Content-Type: application/json
-      // but has no body (e.g. DELETE calls) with a 400 FST_ERR_CTP_EMPTY_JSON_BODY.
-      ...(options?.body ? { "Content-Type": "application/json" } : {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    ...options,
-  });
+  const method = options?.method ?? "GET";
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, {
+      headers: {
+        // Fastify 5 rejects a request that declares Content-Type: application/json
+        // but has no body (e.g. DELETE calls) with a 400 FST_ERR_CTP_EMPTY_JSON_BODY.
+        ...(options?.body ? { "Content-Type": "application/json" } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      ...options,
+    });
+  } catch (err) {
+    // The request never reached the backend at all (sidecar not running,
+    // wrong port, blocked by CORS). "Failed to fetch" alone tells the user
+    // nothing, so spell out what was attempted.
+    const wrapped = new Error(
+      `Keine Verbindung zum Programm-Dienst (${method} ${path}): ${(err as Error).message}. ` +
+        `Läuft die Anwendung noch? Ein Neustart behebt das meistens.`,
+    );
+    // Keep the original around for debugging (the lib target predates the
+    // Error `cause` constructor option).
+    (wrapped as Error & { cause?: unknown }).cause = err;
+    throw wrapped;
+  }
+
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error ?? `API-Fehler ${res.status}`);
+    // Prefer the backend's German message; fall back to whatever text came
+    // back, and always include status + request so a report is actionable.
+    const raw = await res.text().catch(() => "");
+    let message: string;
+    try {
+      message = (JSON.parse(raw) as { error?: string }).error ?? "";
+    } catch {
+      // Not JSON at all (e.g. an HTML error page) - show the raw start of it.
+      message = raw.slice(0, 300);
+    }
+    throw new Error(message || `API-Fehler ${res.status} ${res.statusText} bei ${method} ${path}`);
   }
   if (res.status === 204) return undefined as T;
   return res.json();

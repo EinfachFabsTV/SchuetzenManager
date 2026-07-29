@@ -4,8 +4,8 @@ import { Tour } from "./Tour";
 import type { TourStep } from "../lib/tour";
 
 const steps: TourStep[] = [
-  { target: null, title: "Willkommen", body: "Los geht's.", sinceVersion: 1 },
-  { target: "thing", title: "Das Ding", body: "Hier ist es.", sinceVersion: 1 },
+  { id: "a", target: null, title: "Willkommen", body: "Los geht's.", requires: "start", sinceVersion: 1 },
+  { id: "b", target: "thing", title: "Das Ding", body: "Hier ist es.", requires: "start", sinceVersion: 1 },
 ];
 
 describe("Tour", () => {

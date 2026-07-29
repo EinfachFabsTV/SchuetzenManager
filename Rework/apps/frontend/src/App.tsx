@@ -9,7 +9,7 @@ import { SplashScreen } from "./components/SplashScreen";
 import { SettingsPage } from "./components/SettingsPage";
 import { UpdateNotice } from "./components/UpdateNotice";
 import { Tour } from "./components/Tour";
-import { TOUR_STEPS, stepsToAutoRun, markTourSeen, type TourStep } from "./lib/tour";
+import { TOUR_STEPS, stepsToAutoRun, markStepsDone, resetTourProgress, type TourStep } from "./lib/tour";
 import { theme } from "./theme";
 
 type View = { kind: "empty" } | { kind: "create" } | { kind: "season"; id: number } | { kind: "settings" };
@@ -21,20 +21,31 @@ export default function App() {
   const [showSplash, setShowSplash] = useState(true);
   const [tourSteps, setTourSteps] = useState<TourStep[] | null>(null);
 
-  // Auto-run the tour once the splash is gone (targets are mounted by then):
-  // the whole tour on first launch, only new steps after an update. A replay
-  // from Settings dispatches "sm:start-tour" to show everything again.
+  // The tour runs in context-matched segments, so it never explains something
+  // that isn't on screen: the "start" steps once the splash is gone, and the
+  // season steps only when a season is actually open. Progress is remembered
+  // per step, so opening a season later simply continues where it left off.
+  const tourContext = view.kind === "season" ? "season" : "start";
   useEffect(() => {
-    if (showSplash) return;
-    const steps = stepsToAutoRun();
-    if (steps.length > 0) setTourSteps(steps);
-  }, [showSplash]);
+    if (showSplash || tourSteps) return;
+    const steps = stepsToAutoRun(tourContext);
+    // Give the newly rendered section a tick to mount its data-tour targets.
+    if (steps.length > 0) {
+      const t = setTimeout(() => setTourSteps(steps), 150);
+      return () => clearTimeout(t);
+    }
+  }, [showSplash, tourContext, tourSteps]);
 
   useEffect(() => {
-    const replay = () => setTourSteps(TOUR_STEPS);
+    // Replay from Settings: clear progress and show every step of the
+    // current context, so the user sees a coherent run rather than leftovers.
+    const replay = () => {
+      resetTourProgress();
+      setTourSteps(TOUR_STEPS.filter((s) => s.requires === (view.kind === "season" ? "season" : "start")));
+    };
     window.addEventListener("sm:start-tour", replay);
     return () => window.removeEventListener("sm:start-tour", replay);
-  }, []);
+  }, [view.kind]);
 
   function openSeason(id: number) {
     setView({ kind: "season", id });
@@ -97,7 +108,7 @@ export default function App() {
               <Tour
                 steps={tourSteps}
                 onFinish={() => {
-                  markTourSeen();
+                  markStepsDone(tourSteps);
                   setTourSteps(null);
                 }}
               />
