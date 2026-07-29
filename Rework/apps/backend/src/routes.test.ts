@@ -357,6 +357,52 @@ test("deleting a user removes them from the list", async () => {
   assert.ok(!users.some((u: { email: string }) => u.email === "member@example.com"));
 });
 
+test("global settings round-trip: header lines and a base64 logo", async () => {
+  const pngBase64 =
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+  const put = await app.inject({
+    method: "PUT",
+    url: "/api/settings",
+    headers: { authorization: `Bearer ${token}` },
+    payload: { headerLine1: "Schützenkreis Meppen", headerLine2: "www.kreis-meppen.de", logo: `data:image/png;base64,${pngBase64}` },
+  });
+  assert.equal(put.statusCode, 200);
+  assert.equal(put.json().hasLogo, true);
+
+  const get = (await app.inject({ method: "GET", url: "/api/settings" })).json();
+  assert.equal(get.headerLine1, "Schützenkreis Meppen");
+  assert.equal(get.hasLogo, true);
+
+  const logo = await app.inject({ method: "GET", url: "/api/settings/logo" });
+  assert.equal(logo.statusCode, 200);
+  assert.match(logo.headers["content-type"] as string, /image/);
+});
+
+test("an oversized logo is rejected with a readable error", async () => {
+  const huge = Buffer.alloc(1024 * 1024 + 10).toString("base64");
+  const res = await app.inject({
+    method: "PUT",
+    url: "/api/settings",
+    headers: { authorization: `Bearer ${token}` },
+    payload: { logo: huge },
+  });
+  assert.equal(res.statusCode, 400);
+  assert.match(res.json().error, /zu groß/);
+});
+
+test("a competition week can carry a second (guest) date", async () => {
+  const res = await app.inject({
+    method: "PUT",
+    url: `/api/seasons/${seasonId}/dates`,
+    headers: { authorization: `Bearer ${token}` },
+    payload: { dates: [{ week: 1, date: "2025-09-15", dateGuest: "2025-09-21" }] },
+  });
+  assert.equal(res.statusCode, 200);
+  const week1 = res.json().find((d: { week: number }) => d.week === 1);
+  assert.equal(week1.date, "2025-09-15");
+  assert.equal(week1.dateGuest, "2025-09-21");
+});
+
 test("deleting the season removes it (DELETE without a body must not 400)", async () => {
   const res = await app.inject({
     method: "DELETE",

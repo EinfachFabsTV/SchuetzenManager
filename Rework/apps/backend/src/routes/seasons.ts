@@ -4,6 +4,7 @@ import { generateSchedule } from "../domain/roundRobin.js";
 import { computeTable } from "../domain/table.js";
 import { computePersonalScores } from "../domain/personalScores.js";
 import { generateSeasonPdf } from "../domain/pdf.js";
+import { decodeLogo } from "./settings.js";
 import { requireAuth } from "../auth.js";
 
 type TeamInput = {
@@ -20,17 +21,27 @@ export const seasonsRoutes: FastifyPluginAsync = async (app) => {
     return prisma.season.findMany({ orderBy: [{ year: "desc" }, { label: "asc" }] });
   });
 
-  app.post<{ Body: { year: number; label: string; teams: TeamInput[] } }>(
+  app.post<{ Body: { year: number; label: string; teams: TeamInput[]; headerLine1?: string | null; headerLine2?: string | null; logo?: string | null } }>(
     "/seasons",
     { preHandler: requireAuth },
     async (request, reply) => {
-    const { year, label, teams } = request.body;
+    const { year, label, teams, headerLine1, headerLine2, logo } = request.body;
     if (!teams || teams.length < 2) {
       reply.code(400);
       return { error: "Eine Saison braucht mindestens 2 Mannschaften." };
     }
 
-    const season = await prisma.season.create({ data: { year, label } });
+    // Optional per-season PDF header override. Left empty here means the
+    // season falls back to the global Settings header at PDF time.
+    const season = await prisma.season.create({
+      data: {
+        year,
+        label,
+        headerLine1: headerLine1 ?? null,
+        headerLine2: headerLine2 ?? null,
+        logo: logo ? decodeLogo(logo) : null,
+      },
+    });
 
     const createdTeams = [];
     for (const team of teams) {
@@ -86,12 +97,15 @@ export const seasonsRoutes: FastifyPluginAsync = async (app) => {
   // Mirrors view/EditDateInfo.java: the season-level metadata shown on the
   // PDF (Ansprechpartner, Kontakt-Mail, Infobox-Text). Partial update - only
   // the provided fields are changed.
-  app.put<{ Params: { id: string }; Body: { infoBox?: string | null; contactMail?: string | null; contactPerson?: string | null } }>(
+  app.put<{
+    Params: { id: string };
+    Body: { infoBox?: string | null; contactMail?: string | null; contactPerson?: string | null; headerLine1?: string | null; headerLine2?: string | null; logo?: string | null };
+  }>(
     "/seasons/:id",
     { preHandler: requireAuth },
     async (request, reply) => {
       const id = Number(request.params.id);
-      const { infoBox, contactMail, contactPerson } = request.body;
+      const { infoBox, contactMail, contactPerson, headerLine1, headerLine2, logo } = request.body;
       try {
         return await prisma.season.update({
           where: { id },
@@ -99,6 +113,10 @@ export const seasonsRoutes: FastifyPluginAsync = async (app) => {
             ...(infoBox !== undefined ? { infoBox } : {}),
             ...(contactMail !== undefined ? { contactMail } : {}),
             ...(contactPerson !== undefined ? { contactPerson } : {}),
+            ...(headerLine1 !== undefined ? { headerLine1 } : {}),
+            ...(headerLine2 !== undefined ? { headerLine2 } : {}),
+            // logo: base64 to set, null to clear, omitted to keep.
+            ...(logo !== undefined ? { logo: logo ? decodeLogo(logo) : null } : {}),
           },
         });
       } catch {
@@ -112,7 +130,7 @@ export const seasonsRoutes: FastifyPluginAsync = async (app) => {
   // week. Dates are stored as ISO "YYYY-MM-DD" strings (the native <input
   // type="date"> value); an empty/null date clears the week. Upserts by the
   // (seasonId, week) unique constraint so it's safe to send all weeks at once.
-  app.put<{ Params: { id: string }; Body: { dates: { week: number; date: string | null }[] } }>(
+  app.put<{ Params: { id: string }; Body: { dates: { week: number; date: string | null; dateGuest?: string | null }[] } }>(
     "/seasons/:id/dates",
     { preHandler: requireAuth },
     async (request, reply) => {
@@ -127,8 +145,8 @@ export const seasonsRoutes: FastifyPluginAsync = async (app) => {
         (dates ?? []).map((d) =>
           prisma.matchDate.upsert({
             where: { seasonId_week: { seasonId: id, week: d.week } },
-            create: { seasonId: id, week: d.week, date: d.date || null },
-            update: { date: d.date || null },
+            create: { seasonId: id, week: d.week, date: d.date || null, dateGuest: d.dateGuest || null },
+            update: { date: d.date || null, dateGuest: d.dateGuest || null },
           }),
         ),
       );
@@ -202,10 +220,13 @@ export const seasonsRoutes: FastifyPluginAsync = async (app) => {
 
       const requested = new Set((request.query.sections ?? "dates,table,scores").split(","));
       const teamNamesById = new Map(season.teams.map((t) => [t.id, t.name]));
-      const maxWeek = season.matchDates.length > 0 ? Math.max(...season.matchDates.map((d) => d.week)) : 0;
-      const dateByWeek = new Map(season.matchDates.map((d) => [d.week, d.date]));
+      // maxWeek spans both scheduled dates and the matches themselves - a
+      // match rescheduled past the original last week must still appear.
+      const weekNumbers = [...season.matchDates.map((d) => d.week), ...season.matches.map((m) => m.week)];
+      const maxWeek = weekNumbers.length > 0 ? Math.max(...weekNumbers) : 0;
+      const dateByWeek = new Map(season.matchDates.map((d) => [d.week, d]));
 
-      const matchesByWeek: { week: number; homeTeam: string; guestTeam: string; date: string | null }[][] = Array.from(
+      const matchesByWeek: { week: number; homeTeam: string; guestTeam: string; date: string | null; dateGuest: string | null }[][] = Array.from(
         { length: maxWeek },
         () => [],
       );
@@ -214,14 +235,29 @@ export const seasonsRoutes: FastifyPluginAsync = async (app) => {
           week: match.week,
           homeTeam: match.homeTeam.name,
           guestTeam: match.guestTeam.name,
-          date: dateByWeek.get(match.week) ?? null,
+          date: dateByWeek.get(match.week)?.date ?? null,
+          dateGuest: dateByWeek.get(match.week)?.dateGuest ?? null,
         });
       }
 
+      // Resolve the PDF header: per-season override wins, else global defaults.
+      const settings = await prisma.settings.findUnique({ where: { id: 1 } });
+      const headerLine1 = season.headerLine1 ?? settings?.headerLine1 ?? null;
+      const headerLine2 = season.headerLine2 ?? settings?.headerLine2 ?? null;
+      const logo = season.logo ?? settings?.logo ?? null;
+
       const pdfBytes = await generateSeasonPdf(
-        { year: season.year, label: season.label, contactPerson: season.contactPerson, contactMail: season.contactMail },
         {
-          dates: requested.has("dates") ? { teams: season.teams, matchesByWeek } : undefined,
+          year: season.year,
+          label: season.label,
+          contactPerson: season.contactPerson,
+          contactMail: season.contactMail,
+          headerLine1,
+          headerLine2,
+          logo: logo ? new Uint8Array(logo) : null,
+        },
+        {
+          dates: requested.has("dates") ? { teams: season.teams, matchesByWeek, maxWeek } : undefined,
           resultTable: requested.has("table") ? computeTable(season.teams, season.matches) : undefined,
           personalScores: requested.has("scores") ? computePersonalScores(season.matches, teamNamesById) : undefined,
         },

@@ -1,7 +1,7 @@
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import fs from "node:fs";
-import Fastify from "fastify";
+import Fastify, { type FastifyError } from "fastify";
 import fastifyStatic from "@fastify/static";
 import fastifyCors from "@fastify/cors";
 import { seasonsRoutes } from "./routes/seasons.js";
@@ -10,13 +10,18 @@ import { teamsRoutes } from "./routes/teams.js";
 import { authRoutes } from "./routes/auth.js";
 import { usersRoutes } from "./routes/users.js";
 import { responsibleRoutes } from "./routes/responsible.js";
+import { settingsRoutes } from "./routes/settings.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Split out from server.ts so tests can build a Fastify instance (and
 // exercise it via .inject()) without also binding a real network port.
 export async function buildApp(options?: { logger?: boolean }) {
-  const app = Fastify({ logger: options?.logger ?? true });
+  // Raised from Fastify's 1 MB default so a legitimate logo upload fits: the
+  // logo is sent as base64 JSON (~33% larger), so a 1 MB image is ~1.33 MB on
+  // the wire. The real per-logo cap (1 MB decoded) is enforced in
+  // routes/settings.ts; this just keeps the transport from rejecting it first.
+  const app = Fastify({ logger: options?.logger ?? true, bodyLimit: 3 * 1024 * 1024 });
 
   // Needed for the desktop app: the Tauri webview runs at its own origin
   // (e.g. http://tauri.localhost) and calls this sidecar backend
@@ -43,7 +48,7 @@ export async function buildApp(options?: { logger?: boolean }) {
   // the safety net for the unexpected rest, so the frontend (which reads
   // body.error) always has something meaningful to show on a failed save.
   // Internal details are logged, never leaked to the client.
-  app.setErrorHandler((error, request, reply) => {
+  app.setErrorHandler((error: FastifyError, request, reply) => {
     request.log.error(error);
     const status = typeof error.statusCode === "number" && error.statusCode >= 400 && error.statusCode < 600 ? error.statusCode : 500;
     // 4xx (e.g. schema validation) carry a useful message; 5xx must not
@@ -60,6 +65,7 @@ export async function buildApp(options?: { logger?: boolean }) {
   await app.register(matchesRoutes, { prefix: "/api" });
   await app.register(teamsRoutes, { prefix: "/api" });
   await app.register(responsibleRoutes, { prefix: "/api" });
+  await app.register(settingsRoutes, { prefix: "/api" });
 
   // In the Docker image, the built frontend (Rework/apps/frontend/dist) is
   // copied next to this file's compiled output as ./public - see Dockerfile.

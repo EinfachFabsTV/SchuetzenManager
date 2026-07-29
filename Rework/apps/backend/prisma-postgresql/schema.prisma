@@ -23,10 +23,25 @@ model Season {
   infoBox       String?
   contactMail   String?
   contactPerson String?
+  // Optional per-season PDF header override. When any is null the global
+  // Settings value is used instead (resolved at PDF generation time).
+  headerLine1   String?
+  headerLine2   String?
+  logo          Bytes?
   createdAt     DateTime    @default(now())
   teams         Team[]
   matches       Match[]
   matchDates    MatchDate[]
+}
+
+// Single global row (id = 1) holding the default PDF header. The logo is
+// stored as bytes here, not as a filesystem path, so it survives deleting
+// the folder the user picked the image from.
+model Settings {
+  id          Int     @id @default(1)
+  headerLine1 String?
+  headerLine2 String?
+  logo        Bytes?
 }
 
 model Team {
@@ -60,11 +75,14 @@ model Match {
 }
 
 model MatchDate {
-  id       Int     @id @default(autoincrement())
-  week     Int
-  date     String?
-  season   Season  @relation(fields: [seasonId], references: [id], onDelete: Cascade)
-  seasonId Int
+  id        Int     @id @default(autoincrement())
+  week      Int
+  // `date` is the home leg (primary) date; `dateGuest` the optional second
+  // date the Meppen print layout shows below it. Existing rows keep `date`.
+  date      String?
+  dateGuest String?
+  season    Season  @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  seasonId  Int
 
   @@unique([seasonId, week])
 }
