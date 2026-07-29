@@ -6,7 +6,7 @@ import { api } from "../api/client";
 const invokeMock = vi.fn();
 vi.mock("@tauri-apps/api/core", () => ({ invoke: (...args: unknown[]) => invokeMock(...args) }));
 vi.mock("../api/client", () => ({
-  api: { getUsers: vi.fn(), createUser: vi.fn(), deleteUser: vi.fn(), resetUserPassword: vi.fn() },
+  api: { getUsers: vi.fn(), createUser: vi.fn(), deleteUser: vi.fn(), resetUserPassword: vi.fn(), getSettings: vi.fn(), updateSettings: vi.fn() },
 }));
 
 function markAsTauri() {
@@ -22,6 +22,8 @@ const user = { id: 1, email: "admin@example.com", realName: "Admin" };
 describe("SettingsPage", () => {
   beforeEach(() => {
     invokeMock.mockReset();
+    vi.mocked(api.getSettings).mockReset().mockResolvedValue({ headerLine1: null, headerLine2: null, hasLogo: false });
+    vi.mocked(api.updateSettings).mockReset().mockResolvedValue({ headerLine1: null, headerLine2: null, hasLogo: false });
     vi.mocked(api.getUsers).mockReset().mockResolvedValue([]);
     vi.mocked(api.createUser).mockReset();
     vi.mocked(api.deleteUser).mockReset().mockResolvedValue(undefined);
@@ -137,7 +139,9 @@ describe("SettingsPage", () => {
       fireEvent.click(screen.getByRole("button", { name: "+ Nutzer hinzufügen" }));
       const inputs = document.querySelectorAll("input");
       const emailInput = Array.from(inputs).find((i) => i.type === "email")!;
-      const nameInput = Array.from(inputs).find((i) => i.type === "text")!;
+      // Scope to the add-user form so the PDF-header text inputs elsewhere
+      // on the settings page aren't mistaken for the name field.
+      const nameInput = emailInput.form!.querySelector('input:not([type="email"])') as HTMLInputElement;
       fireEvent.change(emailInput, { target: { value: "new@example.com" } });
       fireEvent.change(nameInput, { target: { value: "Neu" } });
       fireEvent.click(screen.getByRole("button", { name: "Anlegen" }));

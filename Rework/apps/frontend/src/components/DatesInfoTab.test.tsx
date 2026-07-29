@@ -16,8 +16,8 @@ const season: SeasonDetail = {
   teams: [],
   matches: [],
   matchDates: [
-    { id: 1, week: 1, date: "2026-03-15", seasonId: 1 },
-    { id: 2, week: 2, date: null, seasonId: 1 },
+    { id: 1, week: 1, date: "2026-03-15", dateGuest: null, seasonId: 1 },
+    { id: 2, week: 2, date: null, dateGuest: null, seasonId: 1 },
   ],
 };
 
@@ -27,28 +27,31 @@ describe("DatesInfoTab", () => {
     vi.mocked(api.updateSeasonInfo).mockReset().mockResolvedValue(season);
   });
 
-  it("pre-fills one date input per week and the info fields", () => {
+  it("pre-fills a home and guest date input per week and the info fields", () => {
     render(<DatesInfoTab season={season} onUpdated={vi.fn()} />);
 
+    // Two inputs per week now (home + guest).
     const dateInputs = document.querySelectorAll('input[type="date"]');
-    expect(dateInputs).toHaveLength(2);
+    expect(dateInputs).toHaveLength(4);
     expect((dateInputs[0] as HTMLInputElement).value).toBe("2026-03-15");
     expect(screen.getByDisplayValue("Max")).toBeInTheDocument();
     expect(screen.getByDisplayValue("a@b.de")).toBeInTheDocument();
     expect(screen.getByDisplayValue("alter Text")).toBeInTheDocument();
   });
 
-  it("saves all weeks (edited value included, empty week as null)", async () => {
+  it("saves all weeks with home and guest dates (empty as null)", async () => {
     render(<DatesInfoTab season={season} onUpdated={vi.fn()} />);
 
     const dateInputs = document.querySelectorAll('input[type="date"]');
-    fireEvent.change(dateInputs[1], { target: { value: "2026-03-22" } });
+    // Order: week1 home, week1 guest, week2 home, week2 guest.
+    fireEvent.change(dateInputs[1], { target: { value: "2026-03-21" } });
+    fireEvent.change(dateInputs[2], { target: { value: "2026-03-22" } });
     fireEvent.click(screen.getByRole("button", { name: "Termine speichern" }));
 
     await waitFor(() =>
       expect(api.updateDates).toHaveBeenCalledWith(1, [
-        { week: 1, date: "2026-03-15" },
-        { week: 2, date: "2026-03-22" },
+        { week: 1, date: "2026-03-15", dateGuest: "2026-03-21" },
+        { week: 2, date: "2026-03-22", dateGuest: null },
       ]),
     );
     expect(await screen.findByText("Termine gespeichert.")).toBeInTheDocument();

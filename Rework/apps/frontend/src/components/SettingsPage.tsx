@@ -37,6 +37,7 @@ export function SettingsPage({ user }: Props) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
       <h1 style={{ fontSize: 20, fontWeight: 600, margin: 0 }}>Einstellungen</h1>
+      <PdfHeaderSection />
       {isTauri() && <VaultPasswordSection />}
       {user && (
         <div style={cardStyle}>
@@ -59,6 +60,123 @@ export function SettingsPage({ user }: Props) {
           <VaultResetPanel onReset={() => window.location.reload()} />
         </div>
       )}
+    </div>
+  );
+}
+
+// Reads a picked image file as a base64 data URL for upload. The bytes are
+// stored in the DB server-side, so the original file/folder can be deleted.
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(new Error("Datei konnte nicht gelesen werden."));
+    reader.readAsDataURL(file);
+  });
+}
+
+// Global default PDF header (club name, website, logo). A season can override
+// these at creation; otherwise every PDF uses what's set here.
+function PdfHeaderSection() {
+  const [line1, setLine1] = useState("");
+  const [line2, setLine2] = useState("");
+  const [hasLogo, setHasLogo] = useState(false);
+  // undefined = unchanged, null = remove, string = new base64 logo.
+  const [newLogo, setNewLogo] = useState<string | null | undefined>(undefined);
+  const [logoName, setLogoName] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    api
+      .getSettings()
+      .then((s) => {
+        setLine1(s.headerLine1 ?? "");
+        setLine2(s.headerLine2 ?? "");
+        setHasLogo(s.hasLogo);
+      })
+      .catch((err) => setError((err as Error).message));
+  }, []);
+
+  async function handleFile(file: File | undefined) {
+    setError(null);
+    if (!file) return;
+    try {
+      setNewLogo(await fileToDataUrl(file));
+      setLogoName(file.name);
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
+  async function save() {
+    setMessage(null);
+    setError(null);
+    setSaving(true);
+    try {
+      const result = await api.updateSettings({
+        headerLine1: line1 || null,
+        headerLine2: line2 || null,
+        ...(newLogo !== undefined ? { logo: newLogo } : {}),
+      });
+      setHasLogo(result.hasLogo);
+      setNewLogo(undefined);
+      setLogoName(null);
+      setMessage("Gespeichert.");
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const label: React.CSSProperties = { display: "flex", flexDirection: "column", gap: 4, fontSize: 12, color: theme.textMuted };
+
+  return (
+    <div style={cardStyle}>
+      <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 4, color: theme.text }}>PDF-Kopf</h3>
+      <p style={{ fontSize: 12, color: theme.textMuted, marginTop: 0, marginBottom: 16 }}>
+        Erscheint oben auf jedem exportierten PDF. Beim Anlegen einer Saison kann davon abgewichen werden.
+      </p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <label style={label}>
+          Zeile 1 (z.B. Vereinsname)
+          <input value={line1} onChange={(e) => setLine1(e.target.value)} style={inputStyle} />
+        </label>
+        <label style={label}>
+          Zeile 2 (z.B. Website)
+          <input value={line2} onChange={(e) => setLine2(e.target.value)} style={inputStyle} />
+        </label>
+        <label style={label}>
+          Logo
+          <input type="file" accept="image/png,image/jpeg" onChange={(e) => handleFile(e.target.files?.[0])} style={{ fontSize: 12, color: theme.text }} />
+        </label>
+        <div style={{ fontSize: 12, color: theme.textMuted }}>
+          {newLogo === null
+            ? "Logo wird beim Speichern entfernt."
+            : logoName
+              ? `Neues Logo: ${logoName}`
+              : hasLogo
+                ? "Ein Logo ist hinterlegt."
+                : "Kein Logo hinterlegt."}
+          {(hasLogo || newLogo) && newLogo !== null && (
+            <button type="button" onClick={() => { setNewLogo(null); setLogoName(null); }} style={{ marginLeft: 10, border: "none", background: "none", color: theme.danger, fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>
+              entfernen
+            </button>
+          )}
+        </div>
+      </div>
+      {error && <p style={{ color: theme.danger, fontSize: 13, marginTop: 10 }}>{error}</p>}
+      {message && <p style={{ color: theme.green, fontSize: 13, marginTop: 10 }}>{message}</p>}
+      <button
+        type="button"
+        onClick={save}
+        disabled={saving}
+        style={{ marginTop: 14, border: "none", background: theme.green, color: theme.onAccent, borderRadius: 6, padding: "8px 16px", fontSize: 13, cursor: "pointer" }}
+      >
+        {saving ? "Speichert…" : "Speichern"}
+      </button>
     </div>
   );
 }

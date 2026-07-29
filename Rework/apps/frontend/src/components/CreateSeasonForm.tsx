@@ -22,6 +22,11 @@ export function CreateSeasonForm({ onCreated, onCancel }: Props) {
   const [year, setYear] = useState(new Date().getFullYear());
   const [label, setLabel] = useState("");
   const [teams, setTeams] = useState<NewTeamInput[]>([{ name: "" }, { name: "" }]);
+  // Off = this season uses the global PDF header from Einstellungen. On =
+  // custom header lines just for this season (logo stays global for now).
+  const [customHeader, setCustomHeader] = useState(false);
+  const [headerLine1, setHeaderLine1] = useState("");
+  const [headerLine2, setHeaderLine2] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -39,7 +44,12 @@ export function CreateSeasonForm({ onCreated, onCancel }: Props) {
     }
     setSaving(true);
     try {
-      const season = await api.createSeason({ year, label, teams: cleanTeams });
+      const season = await api.createSeason({
+        year,
+        label,
+        teams: cleanTeams,
+        ...(customHeader ? { headerLine1: headerLine1 || null, headerLine2: headerLine2 || null } : {}),
+      });
       onCreated(season.id);
     } catch (err) {
       setError((err as Error).message);
@@ -113,6 +123,20 @@ export function CreateSeasonForm({ onCreated, onCancel }: Props) {
       >
         + Mannschaft
       </button>
+
+      <div style={{ marginBottom: 20 }}>
+        <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>
+          <input type="checkbox" checked={customHeader} onChange={(e) => setCustomHeader(e.target.checked)} />
+          Eigener PDF-Kopf für diese Saison (statt Standard aus den Einstellungen)
+        </label>
+        {customHeader && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 10, maxWidth: 420 }}>
+            <input value={headerLine1} onChange={(e) => setHeaderLine1(e.target.value)} placeholder="Zeile 1 (z.B. Vereinsname)" style={{ ...inputStyle, width: "100%" }} />
+            <input value={headerLine2} onChange={(e) => setHeaderLine2(e.target.value)} placeholder="Zeile 2 (z.B. Website)" style={{ ...inputStyle, width: "100%" }} />
+            <span style={{ fontSize: 11, color: theme.textMuted }}>Das Logo wird weiterhin aus den globalen Einstellungen übernommen.</span>
+          </div>
+        )}
+      </div>
 
       {error && <p style={{ color: theme.danger, fontSize: 13 }}>{error}</p>}
 

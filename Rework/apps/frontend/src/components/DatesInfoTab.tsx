@@ -29,6 +29,9 @@ export function DatesInfoTab({ season, onUpdated }: { season: SeasonDetail; onUp
   const [dates, setDates] = useState<Record<number, string>>(
     Object.fromEntries(season.matchDates.map((d) => [d.week, d.date ?? ""])),
   );
+  const [guestDates, setGuestDates] = useState<Record<number, string>>(
+    Object.fromEntries(season.matchDates.map((d) => [d.week, d.dateGuest ?? ""])),
+  );
   const [infoBox, setInfoBox] = useState(season.infoBox ?? "");
   const [contactPerson, setContactPerson] = useState(season.contactPerson ?? "");
   const [contactMail, setContactMail] = useState(season.contactMail ?? "");
@@ -45,7 +48,7 @@ export function DatesInfoTab({ season, onUpdated }: { season: SeasonDetail; onUp
     try {
       await api.updateDates(
         season.id,
-        weeks.map((w) => ({ week: w.week, date: dates[w.week] || null })),
+        weeks.map((w) => ({ week: w.week, date: dates[w.week] || null, dateGuest: guestDates[w.week] || null })),
       );
       setDatesMsg("Termine gespeichert.");
       onUpdated();
@@ -73,8 +76,17 @@ export function DatesInfoTab({ season, onUpdated }: { season: SeasonDetail; onUp
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 32, maxWidth: 560 }}>
       <section>
-        <h2 style={{ fontSize: 15, fontWeight: 600, marginBottom: 12 }}>Termine der Wettkampfwochen</h2>
+        <h2 style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Termine der Wettkampfwochen</h2>
+        <p style={{ fontSize: 12, color: theme.textMuted, marginBottom: 12 }}>
+          Heimtag und optional ein zweiter Tag (Gasttag) — beide erscheinen im PDF-Spielplan.
+        </p>
         {weeks.length === 0 && <p style={{ fontSize: 13, color: theme.textMuted }}>Keine Wochen vorhanden.</p>}
+        {weeks.length > 0 && (
+          <div style={{ display: "flex", gap: 12, fontSize: 11, color: theme.textMuted, marginBottom: 4, paddingLeft: 102 }}>
+            <span style={{ width: 170 }}>Heimtag</span>
+            <span style={{ width: 170 }}>Gasttag (optional)</span>
+          </div>
+        )}
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {weeks.map((w) => (
             <label key={w.week} style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 13 }}>
@@ -83,6 +95,12 @@ export function DatesInfoTab({ season, onUpdated }: { season: SeasonDetail; onUp
                 type="date"
                 value={dates[w.week] ?? ""}
                 onChange={(e) => setDates((prev) => ({ ...prev, [w.week]: e.target.value }))}
+                style={{ ...inputStyle, width: 170 }}
+              />
+              <input
+                type="date"
+                value={guestDates[w.week] ?? ""}
+                onChange={(e) => setGuestDates((prev) => ({ ...prev, [w.week]: e.target.value }))}
                 style={{ ...inputStyle, width: 170 }}
               />
             </label>

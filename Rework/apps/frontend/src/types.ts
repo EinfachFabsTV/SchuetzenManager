@@ -43,6 +43,7 @@ export type MatchDate = {
   id: number;
   week: number;
   date: string | null;
+  dateGuest: string | null;
   seasonId: number;
 };
 

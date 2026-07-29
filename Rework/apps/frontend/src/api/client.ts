@@ -50,9 +50,12 @@ export type NewTeamInput = {
 export type AuthUser = { id: number; email: string; realName: string };
 export type AuthResponse = { token: string; user: AuthUser };
 
+export type PdfHeaderSettings = { headerLine1: string | null; headerLine2: string | null; hasLogo: boolean };
+export type SeasonHeaderInput = { headerLine1?: string | null; headerLine2?: string | null; logo?: string | null };
+
 export const api = {
   getSeasons: () => request<SeasonSummary[]>("/seasons"),
-  createSeason: (data: { year: number; label: string; teams: NewTeamInput[] }) =>
+  createSeason: (data: { year: number; label: string; teams: NewTeamInput[] } & SeasonHeaderInput) =>
     request<SeasonDetail>("/seasons", { method: "POST", body: JSON.stringify(data) }),
   getSeason: (id: number) => request<SeasonDetail>(`/seasons/${id}`),
   deleteSeason: (id: number) => request<void>(`/seasons/${id}`, { method: "DELETE" }),
@@ -84,8 +87,13 @@ export const api = {
   resetUserPassword: (id: number) => request<{ ok: true }>(`/users/${id}/reset-password`, { method: "POST" }),
   updateSeasonInfo: (id: number, data: { infoBox?: string | null; contactMail?: string | null; contactPerson?: string | null }) =>
     request<SeasonDetail>(`/seasons/${id}`, { method: "PUT", body: JSON.stringify(data) }),
-  updateDates: (id: number, dates: { week: number; date: string | null }[]) =>
+  updateDates: (id: number, dates: { week: number; date: string | null; dateGuest?: string | null }[]) =>
     request<MatchDate[]>(`/seasons/${id}/dates`, { method: "PUT", body: JSON.stringify({ dates }) }),
+  updateSeasonHeader: (id: number, data: SeasonHeaderInput) =>
+    request<SeasonDetail>(`/seasons/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  getSettings: () => request<PdfHeaderSettings>("/settings"),
+  updateSettings: (data: { headerLine1?: string | null; headerLine2?: string | null; logo?: string | null }) =>
+    request<PdfHeaderSettings>("/settings", { method: "PUT", body: JSON.stringify(data) }),
   getResponsible: (seasonId: number) => request<Responsible[]>(`/seasons/${seasonId}/responsible`),
   addResponsible: (seasonId: number, userId: number, team: string) =>
     request<Responsible>(`/seasons/${seasonId}/responsible`, { method: "POST", body: JSON.stringify({ userId, team }) }),
