@@ -3,162 +3,198 @@
 </p>
 
 <p align="center">
-  Verwaltung von Rundenwettkampf-Saisons für Schießsportvereine — Mannschaften, Ergebniserfassung,<br/>
-  automatische Tabellen- und Einzelwertungsberechnung, PDF-Export und Web-Zugriff für Vereine/Zuschauer.
+  <strong>Rundenwettkämpfe verwalten – von der Saisonplanung bis zum fertigen Spielplan-PDF.</strong>
+</p>
+
+<p align="center">
+  <a href="../../releases/latest"><img alt="Aktuelle Version" src="https://img.shields.io/github/v/release/EinfachFabsTV/SchuetzenManager?label=Download&style=flat-square" /></a>
+  <a href="../../actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/EinfachFabsTV/SchuetzenManager/ci.yml?label=Tests&style=flat-square" /></a>
+  <img alt="Plattformen" src="https://img.shields.io/badge/Windows%20%7C%20Linux-blue?style=flat-square" />
 </p>
 
 ---
 
-Ursprünglich entwickelt von **Christian Kater** als Java-8/JavaFX-Desktop-Projekt für den Schützenkreis Meppen (siehe [Legacy/](Legacy/)). Wird aktuell von Grund auf auf einen modernen, plattformunabhängigen Stack migriert (React + Fastify/Prisma, wahlweise als Desktop-App oder zentral gehostet) — siehe [TECHNICAL.md](TECHNICAL.md) für Architektur, Setup und den vollständigen Migrationsstand.
+**SchützenManager** verwaltet Rundenwettkampf-Saisons für Schießsportvereine: Mannschaften anlegen, Ergebnisse erfassen, Tabellen und Einzelwertungen automatisch berechnen und den Spielplan als PDF ausgeben.
 
-## Funktionen
+Die App läuft **ohne Installation von Zusatzsoftware** – Datenbank und alles Nötige sind enthalten. Die lokalen Daten werden verschlüsselt gespeichert.
 
-- **Saisonverwaltung** — neue Rundenwettkampf-Saison anlegen, automatischer Spielplan per Round-Robin
-- **Ergebniserfassung** pro Match (Heim-/Gastmannschaft, bis zu 4 Schützen + Ersatzschützen)
-- **Automatische Tabellen- und Einzelwertungsberechnung**, live bei jeder Ergebniseingabe
-- **Mannschaftsverwaltung** inkl. Umbenennung mit automatischer Nachführung
-- **Termine & Saison-Infos** — Datum je Wettkampfwoche, Ansprechpartner/Infotext fürs PDF
-- **PDF-Export** (Termine, Gesamtergebnis, Einzelergebnisse)
-- **Verschlüsselte lokale Datenbank** — beim ersten Start Passwort festlegen; die Daten werden mit einem Wiederherstellungscode als Backup verschlüsselt
-- **Web-Zugriff für Vereine/Zuschauer** — Ergebnisse öffentlich einsehbar, Bearbeiten nur mit Login (optional, für zentrales Hosting)
+<table>
+<tr><td width="50%" valign="top">
 
-## Screenshots
+### 📋 Saison & Wettkämpfe
+- Saison anlegen, Spielplan mit Hin- und Rückrunde wird automatisch erzeugt
+- Ergebnisse je Begegnung erfassen (4 Schützen pro Seite + Ersatz)
+- Tabelle und Einzelwertung berechnen sich live mit
+- Ansicht wahlweise nach **Woche** oder **Hin-/Rückrunde**
+- Begegnungen per Ziehen in eine andere Woche verschieben
+
+</td><td width="50%" valign="top">
+
+### 📄 Ausgabe & Verwaltung
+- **PDF-Spielplan** im gewohnten Vereinslayout
+- Eigener **PDF-Kopf mit Logo** – frei einstellbar
+- Termine je Woche (Heim- und optional Gasttag)
+- Mannschaftsdaten: Trainingszeit, Ort, Ansprechpartner
+- Optionaler **Web-Zugriff** für Vereine und Zuschauer
+
+</td></tr>
+</table>
+
+## Vorschau
 
 <table>
 <tr>
-<td align="center" width="50%">
+<td width="55%" valign="top" align="center">
 
-**Legacy (Java/JavaFX)**
+**Oberfläche**
 
-<img src="docs/screenshots/legacy-ui-mockup.svg" alt="Nachbau der bestehenden JavaFX-Oberfläche" width="100%" />
-
-*Nachbau anhand der FXML-Layouts, kein Live-Screenshot — läuft nur unter Java 8.*
+<img src="docs/screenshots/new-ui-concept.svg" alt="Oberfläche des SchützenManagers" width="100%" />
 
 </td>
-<td align="center" width="50%">
+<td width="45%" valign="top" align="center">
 
-**Rework (aktueller Stand)**
+**Exportierter Spielplan**
 
-<img src="docs/screenshots/new-ui-concept.svg" alt="Aktuelle Rework-Oberfläche" width="100%" />
+<a href="docs/images/beispiel-spielplan.pdf"><img src="docs/images/beispiel-spielplan.png" alt="Beispiel eines exportierten Spielplan-PDFs" width="100%" /></a>
 
-*Nachbau der tatsächlich lauffähigen, dunkel gehaltenen Oberfläche (fester Modus, kein Light/Dark-Umschalter).*
+<sub>Echter Export mit Beispieldaten – [als PDF öffnen](docs/images/beispiel-spielplan.pdf)</sub>
 
 </td>
 </tr>
 </table>
 
-## Status
+## Installation
 
-| Bereich | Stand |
-|---|---|
-| **Legacy** (Java/JavaFX) | funktionsfähig, unverändert in [Legacy/](Legacy/) |
-| **Rework — Backend** (Fastify + Prisma) | Saison anlegen (inkl. Spielplan), Ergebniserfassung, Tabelle, Einzelwertung, Mannschaftspflege, Termine & Saison-Infos, PDF-Export, Nutzer-/Verantwortlichenverwaltung + Mail-Versand, Migrationsskript für `database.db` — alles verifiziert, 47 automatisierte Tests |
-| **Rework — Frontend** (React + Vite) | Saisonliste, Saison-Erstellung, Ergebniserfassung, Tabelle/Einzelwertung, Mannschaftsverwaltung, Termine & Info, PDF-Export, Einstellungen, Login — einheitliches dunkles Theme, 66 automatisierte Tests |
-| **Desktop-Hülle** (Tauri) | baut erfolgreich zu `.exe` + NSIS-Installer; Backend startet automatisch als Sidecar-Prozess mit eigener Datenbank pro Nutzer — end-to-end inkl. Neustart-Persistenz getestet (nur unter Windows verifiziert) |
-| **Zentrales Hosting** (Docker + Postgres + Login) | Docker-Image, Postgres-Schema/-Migration und optionales Login stehen und sind (bis auf einen echten Docker-Lauf) getestet |
+Die fertige App gibt es unter **[→ Releases](../../releases/latest)**.
 
-Details, offene Punkte und Testprotokolle zu jedem Punkt: [TECHNICAL.md](TECHNICAL.md).
+<details open>
+<summary><strong>Windows</strong> (empfohlen)</summary>
 
-## Tests
-
-113 automatisierte Tests, bei jedem Push/PR per [CI](.github/workflows/ci.yml) ausgeführt:
-
-- **Backend** (`npm test --workspace apps/backend`, 47 Tests): Domänenlogik (Spielplan-Generierung, Tabellen-/Einzelwertungsberechnung) sowie End-to-End-Tests aller HTTP-Routen gegen eine echte temporäre SQLite-Datenbank (Auth, Saison-/Match-/Mannschafts-CRUD, Termine, Verantwortliche, PDF-Export, Passwort ändern, Nutzerverwaltung inkl. Mail-Versand, CORS-Preflight).
-- **Frontend** (`npm test --workspace apps/frontend`, 66 Tests): Vitest + React Testing Library, u. a. Regressionstest für den früher gefundenen DELETE-Content-Type-Bug, die Formularlogik von Saison-Erstellung/Passwort-ändern/Ergebniserfassung/Mannschaftspflege/Termine, die Login-Gate-Logik (abgelaufene Token, deaktivierte Auth) sowie den Tresor-Dialog (Einrichten/Entsperren).
-
-## Download & Installation
-
-Die fertige App gibt es unter **[→ Releases](../../releases/latest)**. Du brauchst nichts weiter zu installieren — Datenbank und alles Nötige sind enthalten.
-
-### Windows (empfohlen)
-
-1. Auf der **[Releases-Seite](../../releases/latest)** unter „Assets" die Datei **`SchutzenManager_….x64-setup.exe`** herunterladen.
-2. Die heruntergeladene Datei **doppelklicken**.
-3. Es erscheint ein blaues Fenster **„Der Computer wurde durch Windows geschützt"** (SmartScreen). **Das ist normal und kein Grund zur Sorge** — es kommt nur, weil die App nicht mit einem (kostenpflichtigen) Zertifikat signiert ist, nicht weil etwas mit ihr nicht stimmt.
-   - Auf **„Weitere Informationen"** klicken.
-   - Dann erscheint der Button **„Trotzdem ausführen"** — darauf klicken.
-   - *(Je nach Windows-Version stehen „Trotzdem ausführen" / „Nicht ausführen" auch direkt da — dann einfach „Trotzdem ausführen".)*
-4. Den Installationsassistenten mit **„Weiter" / „Installieren"** durchklicken.
-   - Ist bereits eine ältere Version mit Daten vorhanden, fragt der Installer, ob die **vorhandenen Saisondaten behalten** werden sollen. Im Normalfall hier **„Ja"** wählen — „Nein" beginnt bei null (die alten Daten werden dabei nicht gelöscht, sondern verschlüsselt in einen Sicherungsordner verschoben).
+1. Auf der [Releases-Seite](../../releases/latest) unter „Assets" die Datei **`SchutzenManager_….x64-setup.exe`** herunterladen.
+2. Die Datei **doppelklicken**.
+3. Es erscheint ein blaues Fenster **„Der Computer wurde durch Windows geschützt"** (SmartScreen).
+   → Auf **„Weitere Informationen"** klicken, dann auf **„Trotzdem ausführen"**.
+   *Das ist normal* – siehe [Ist das sicher?](#ist-das-sicher) weiter unten.
+4. Den Assistenten mit **„Weiter" / „Installieren"** durchklicken.
 5. Die App über das **Startmenü** starten (nach „SchützenManager" suchen).
-6. **Beim allerersten Start** legst du ein **Passwort** fest und bekommst einen **Wiederherstellungscode** angezeigt. Damit wird deine lokale Datenbank verschlüsselt.
-   > ⚠️ **Den Wiederherstellungscode unbedingt notieren und sicher aufbewahren.** Er ist die einzige Möglichkeit, wieder an deine Daten zu kommen, falls du das Passwort vergisst. Es gibt keine Hintertür.
 
-**Kein Installieren gewünscht?** Stattdessen die Datei `SchuetzenManager-portable-windows-x64.zip` laden, entpacken und darin `schuetzenmanager.exe` starten.
+**Ohne Installation:** Stattdessen `SchuetzenManager-portable-windows-x64.zip` herunterladen, entpacken und darin `schuetzenmanager.exe` starten.
 
-### Linux
+</details>
 
-- **Debian/Ubuntu:** `.deb` laden und installieren — `sudo dpkg -i SchutzenManager_*_amd64.deb`
-- **Andere Distributionen:** `.AppImage` laden, ausführbar machen (`chmod +x SchutzenManager_*.AppImage`) und starten.
+<details>
+<summary><strong>Linux</strong></summary>
 
-### Automatische Updates
+- **Debian / Ubuntu:** `.deb` herunterladen und installieren:
+  ```bash
+  sudo dpkg -i SchutzenManager_*_amd64.deb
+  ```
+- **Andere Distributionen:** `.AppImage` herunterladen, ausführbar machen und starten:
+  ```bash
+  chmod +x SchutzenManager_*.AppImage && ./SchutzenManager_*.AppImage
+  ```
 
-Ab diesem Release prüft die App beim Start (während der Ladeanimation) im Hintergrund, ob auf GitHub eine neuere Version vorliegt, und bietet sie an:
+</details>
 
-- **Optional** (Standard): ein Hinweis mit „Jetzt aktualisieren" / „Später".
-- **Pflicht**: enthält die Release-Beschreibung den Marker **`[pflicht]`**, erscheint ein deutlicher, nicht wegklickbarer Hinweis (die App bleibt trotzdem nutzbar).
+<details>
+<summary><strong>Server / zentrales Hosting</strong> (optional)</summary>
 
-Ein Update lädt und installiert die neue Version und startet die App neu. **Deine Daten gehen dabei nie verloren** — die (verschlüsselte) Datenbank liegt in deinem Benutzerprofil und wird vom Installer nicht angefasst; zusätzlich hält die App bei jedem Entsperren eine Sicherungskopie der letzten funktionierenden Datenbank vor.
+Für den Betrieb mit mehreren Vereinen und Web-Zugriff gibt es ein eigenständiges Docker-Image unter `ghcr.io/einfachfabstv/schuetzenmanager-server` (eigener `server-v*`-Release-Kanal). Details in [TECHNICAL.md](TECHNICAL.md).
 
-### Passwort und Wiederherstellungscode verloren
+</details>
 
-Sind **beide** verloren, lassen sich die gespeicherten Daten nicht mehr öffnen. Das ist keine Einstellung, die sich umlegen ließe: Die Datenbank ist verschlüsselt, und ohne Passwort oder Wiederherstellungscode existiert kein Schlüssel — auch nicht für die Entwickler.
+### ⚠️ Beim ersten Start
 
-Du kannst aber jederzeit **neu anfangen**: Auf dem Anmeldebildschirm führt „Zugang verloren?" zum Zurücksetzen, ebenso der Bereich „Gefahrenzone" unter *Einstellungen*. Zur Sicherheit muss dort das Wort `Bestätigen` eingetippt werden.
+Du legst ein **Passwort** fest und bekommst einen **Wiederherstellungscode** angezeigt. Damit wird deine lokale Datenbank verschlüsselt.
 
-Dabei wird nichts gelöscht: Die alten Daten wandern verschlüsselt in einen Ordner `reset-backup-<Datum>` neben der Datenbank. Taucht dein Wiederherstellungscode später doch noch auf, sind sie damit vollständig zu retten. Verwahre den Code deshalb am besten ausgedruckt.
+> **Notiere den Wiederherstellungscode und bewahre ihn sicher auf – am besten ausgedruckt.**
+> Er ist die einzige Möglichkeit, an deine Daten zu kommen, falls du das Passwort vergisst. Es gibt keine Hintertür – auch nicht für die Entwickler.
 
-### Programm lässt sich nicht deinstallieren
+## Erste Schritte
 
-Ältere Versionen (bis v0.1.2) konnten einen Hintergrundprozess zurücklassen, der Dateien offen hält — Windows bricht die Deinstallation dann ab und entfernt die App trotzdem aus „Apps & Features", sodass Reste liegen bleiben. Ab v0.1.5 beendet der Installer diese Prozesse selbst.
+Beim ersten Öffnen startet eine **geführte Tour**, die alles direkt in der App erklärt. Sie setzt automatisch fort, sobald du eine Saison öffnest, und ist jederzeit über *Einstellungen → Programm-Tour* wiederholbar.
 
-Steckst du auf einer alten Version fest, hilft ein Neustart des Rechners (danach ist nichts mehr gesperrt) und anschließend das Löschen dieser beiden Ordner:
+Zum Nachlesen:
 
-- `%LOCALAPPDATA%\SchützenManager` — das Programm
-- `%APPDATA%\de.schuetzenmanager.desktop` — die Daten (**enthält deine Saisondaten**, vorher sichern, falls du sie noch brauchst)
+| Schritt | Wo | Was |
+|---|---|---|
+| **1. Saison anlegen** | Sidebar → *+ Neue Saison* | Jahr, Bezeichnung (z. B. „LG – Auflage D") und Mannschaften eintragen. Der Spielplan entsteht automatisch. |
+| **2. PDF-Kopf einrichten** | *Einstellungen → PDF-Kopf* | Vereinsname, Website und Logo. Das Logo wird in der Datenbank gespeichert – die Bilddatei kannst du danach löschen. |
+| **3. Termine eintragen** | *Termine & Info* | Je Wettkampfwoche ein Heimtag und optional ein Gasttag. Beide erscheinen im PDF. |
+| **4. Mannschaften pflegen** | *Übersicht* | Trainingstag, Uhrzeit, Ort, Ansprechpartner und Telefonnummer. |
+| **5. Ergebnisse erfassen** | *Wettkämpfe* | Begegnung anklicken, Ringe eintragen, speichern. Tabelle und Einzelwertung aktualisieren sich sofort. |
+| **6. PDF exportieren** | *PDF-Export* | Abschnitte auswählen und über „Speichern unter" ablegen. |
 
-### „Unbekannter Herausgeber" — ist das sicher?
+## Automatische Updates
 
-Ja. Die App ist [quelloffen (Open Source)](../../) und wird automatisch aus diesem Repository gebaut. Windows zeigt die Warnung bei **jeder** App an, die nicht mit einem kostenpflichtigen Code-Signing-Zertifikat signiert ist — das sagt nichts über den Inhalt aus. Wer ganz sichergehen will, kann die App auch selbst aus dem Quellcode bauen (siehe [TECHNICAL.md](TECHNICAL.md#setup--lokal-ausführen)).
+Die App prüft beim Start im Hintergrund, ob eine neuere Version vorliegt:
 
-### Server / zentrales Hosting (optional)
+- **Optionales Update** – Hinweis mit „Jetzt aktualisieren" / „Später".
+- **Pflicht-Update** – bei wichtigen Änderungen ein deutlicher, nicht wegklickbarer Hinweis. Die App bleibt trotzdem nutzbar.
 
-Für den optionalen zentral gehosteten Betrieb (mehrere Vereine, Web-Zugriff) gibt es ein eigenständiges **Docker-Image** unter `ghcr.io/einfachfabstv/schuetzenmanager-server` (eigener `server-v*`-Release-Kanal). Details: [TECHNICAL.md](TECHNICAL.md).
+**Deine Daten gehen dabei nie verloren.** Die verschlüsselte Datenbank liegt in deinem Benutzerprofil und wird vom Installer nicht angefasst. Zusätzlich legt die App bei jedem Entsperren eine Sicherungskopie an, und bestehende Datenbanken werden beim Start automatisch auf das aktuelle Format gebracht.
 
-## Erste Schritte (Tutorial)
+## Hilfe
 
-Eine geführte **Programm-Tour** startet automatisch beim ersten Öffnen und
-erklärt alles direkt in der App (später jederzeit über *Einstellungen →
-Programm-Tour* wiederholbar). Kurzfassung zum Nachlesen:
+<details>
+<summary><strong>Passwort und Wiederherstellungscode verloren</strong></summary>
 
-1. **Passwort festlegen (nur Desktop).** Beim allerersten Start vergibst du ein
-   Passwort und erhältst einen Wiederherstellungscode. Beides notieren — ohne
-   eines von beiden sind die verschlüsselten Daten nicht mehr zu öffnen.
-2. **Neue Saison anlegen.** Sidebar → **+ Neue Saison**: Jahr, Bezeichnung (z.B.
-   „LG - Auflage D") und die Mannschaften eintragen. Der komplette Spielplan mit
-   Hin- und Rückrunde wird automatisch erzeugt. Optional lässt sich hier ein
-   eigener PDF-Kopf nur für diese Saison setzen.
-3. **Ergebnisse erfassen.** Bereich **Wettkämpfe** → ein Match anklicken und die
-   Ringe je Schütze eintragen. Oben rechts schaltest du zwischen **Woche** und
-   **Hin-/Rückrunde** um; Begegnungen lassen sich per Ziehen in eine andere
-   Woche verschieben. Tabelle und Einzelwertung aktualisieren sich sofort.
-4. **Termine & Mannschaften.** Unter **Termine & Info** trägst du je
-   Wettkampfwoche einen **Heim- und optional einen Gasttag** ein; unter
-   **Übersicht** pflegst du Trainingszeiten und Kontaktdaten der Mannschaften.
-5. **PDF-Kopf einrichten.** **Einstellungen → PDF-Kopf**: zwei Textzeilen
-   (Vereinsname, Website) und ein **Logo**. Das Logo wird in der Datenbank
-   gespeichert — du kannst die Bilddatei danach löschen, es bleibt erhalten.
-6. **PDF exportieren.** Bereich **PDF-Export** → Abschnitte wählen und über
-   „Speichern unter" ablegen. Der Spielplan erscheint im gewohnten
-   Meppen-Layout (Kopf mit Logo, Hin-/Rückrunde, Begegnungen spaltenweise,
-   Kontakttabelle). Ein echtes Beispiel liegt unter
-   [docs/images/beispiel-spielplan.pdf](docs/images/beispiel-spielplan.pdf).
+Sind **beide** verloren, lassen sich die gespeicherten Daten nicht mehr öffnen. Das ist keine Einstellung, die sich umlegen ließe: Die Datenbank ist verschlüsselt, und ohne eines der beiden Geheimnisse existiert kein Schlüssel.
 
-> **Passwort/Code verloren?** Auf dem Anmeldebildschirm führt „Zugang verloren?"
-> zum Zurücksetzen (die alten Daten werden verschlüsselt gesichert). Findest du
-> den Code später wieder, holst du die Daten über *Einstellungen → Alte Daten
-> wiederherstellen* zurück.
+**Du kannst aber neu anfangen.** Auf dem Anmeldebildschirm führt *„Zugang verloren?"* zum Zurücksetzen, ebenso *Einstellungen → Gefahrenzone*. Zur Sicherheit muss dort das Wort `Bestätigen` eingetippt werden.
 
-## Lizenz / Copyright
+Dabei wird **nichts gelöscht**: Die alten Daten wandern verschlüsselt in einen Ordner `reset-backup-<Datum>`. Taucht dein Code später doch noch auf, holst du sie über *Einstellungen → Alte Daten wiederherstellen* vollständig zurück.
+
+</details>
+
+<details>
+<summary><strong>Programm lässt sich nicht deinstallieren</strong></summary>
+
+Ältere Versionen (bis v0.1.2) konnten einen Hintergrundprozess zurücklassen, der Dateien offen hält. Windows bricht die Deinstallation dann ab, entfernt die App aber trotzdem aus „Apps & Features" – Reste bleiben liegen. **Ab v0.1.5 beendet der Installer diese Prozesse selbst.**
+
+Steckst du auf einer alten Version fest: Rechner neu starten, danach diese beiden Ordner löschen:
+
+| Ordner | Inhalt |
+|---|---|
+| `%LOCALAPPDATA%\SchützenManager` | das Programm |
+| `%APPDATA%\de.schuetzenmanager.desktop` | **deine Saisondaten** – vorher sichern, falls noch gebraucht |
+
+</details>
+
+<details>
+<summary><strong id="ist-das-sicher">„Unbekannter Herausgeber" – ist das sicher?</strong></summary>
+
+Ja. Die App ist [quelloffen](../../) und wird automatisch aus diesem Repository gebaut. Windows zeigt diese Warnung bei **jeder** Anwendung, die nicht mit einem kostenpflichtigen Code-Signing-Zertifikat signiert ist – das sagt nichts über den Inhalt aus.
+
+Wer ganz sichergehen will, kann die App selbst aus dem Quellcode bauen (siehe [TECHNICAL.md](TECHNICAL.md#setup--lokal-ausführen)).
+
+</details>
+
+<details>
+<summary><strong>Ein Fehler ist aufgetreten</strong></summary>
+
+Fehlermeldungen der App nennen die konkrete Ursache und den betroffenen Vorgang. Diesen Text kannst du direkt melden – unten links in der App über **„Fehler melden"** oder unter [projects.orfabs.de/contact](https://projects.orfabs.de/contact).
+
+</details>
+
+## Für Entwickler
+
+Ursprünglich entwickelt von **Christian Kater** als Java-8/JavaFX-Anwendung für den Schützenkreis Meppen (unverändert in [Legacy/](Legacy/)). Der Nachfolger in [Rework/](Rework/) ist ein plattformunabhängiger Neubau.
+
+**Technik:** React + Vite (Frontend) · Fastify + Prisma (Backend) · Tauri/Rust (Desktop-Hülle) · SQLite lokal, PostgreSQL beim zentralen Hosting.
+
+### Tests
+
+**166 automatisierte Tests**, bei jedem Push und Pull Request per [CI](.github/workflows/ci.yml) ausgeführt (Lint, Typprüfung, Tests, Build):
+
+| Bereich | Umfang | Inhalt |
+|---|---|---|
+| Backend | 51 | Domänenlogik (Spielplan, Tabelle, Einzelwertung, PDF) und alle HTTP-Routen end-to-end gegen eine echte temporäre Datenbank |
+| Frontend | 99 | Vitest + Testing Library: Formularlogik, Login-Gate, Tresor-Dialoge, Tour-Steuerung, Ansichts-Umschalter |
+| Desktop (Rust) | 16 | Verschlüsselung des Datentresors: Schlüsselableitung, Passwortwechsel, Zurücksetzen, Wiederherstellen |
+
+Architektur, Entwicklungs-Setup, Verifikationsprotokolle und offene Punkte: **[TECHNICAL.md](TECHNICAL.md)**.
+
+## Lizenz
 
 Der ursprüngliche Java-Code (© Christian Kater) steht unter der in [LICENSE](LICENSE) genannten Lizenz. Logo und Rework-Markenzeichen: © 2026 Fabian L.
