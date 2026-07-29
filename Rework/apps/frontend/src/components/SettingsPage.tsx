@@ -39,6 +39,7 @@ export function SettingsPage({ user }: Props) {
       <h1 style={{ fontSize: 20, fontWeight: 600, margin: 0 }}>Einstellungen</h1>
       <PdfHeaderSection />
       {isTauri() && <VaultPasswordSection />}
+      {isTauri() && <VaultRestoreSection />}
       {user && (
         <div style={cardStyle}>
           <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 16, color: theme.text }}>Mein Account</h3>
@@ -177,6 +178,102 @@ function PdfHeaderSection() {
       >
         {saving ? "Speichert…" : "Speichern"}
       </button>
+    </div>
+  );
+}
+
+type Backup = { name: string; label: string };
+
+// Restores a previously reset dataset (see vault_reset). Lists the backups
+// found in the data folder; picking one and entering its old password/recovery
+// code makes that data active again under the current credentials. The
+// currently-active data is backed up first, so the choice is reversible.
+function VaultRestoreSection() {
+  const [backups, setBackups] = useState<Backup[]>([]);
+  const [selected, setSelected] = useState<string>("");
+  const [secret, setSecret] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    import("@tauri-apps/api/core")
+      .then(({ invoke }) => invoke<Backup[]>("vault_list_backups"))
+      .then((list) => {
+        const arr = Array.isArray(list) ? list : [];
+        setBackups(arr);
+        if (arr[0]) setSelected(arr[0].name);
+      })
+      .catch((err) => setError(String(err)));
+  }, []);
+
+  async function restore() {
+    setError(null);
+    setBusy(true);
+    try {
+      const { invoke } = await import("@tauri-apps/api/core");
+      await invoke("vault_restore", { backupName: selected, secret });
+      setDone(true);
+    } catch (err) {
+      setError(String(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (done) {
+    return (
+      <div style={cardStyle}>
+        <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 8, color: theme.text }}>Alte Daten wiederherstellen</h3>
+        <p style={{ fontSize: 13, marginBottom: 12 }}>Die alten Daten sind jetzt aktiv. Die App wird neu geladen.</p>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          style={{ border: "none", background: theme.green, color: theme.onAccent, borderRadius: 6, padding: "8px 16px", fontSize: 13, cursor: "pointer" }}
+        >
+          Neu laden
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div style={cardStyle}>
+      <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 8, color: theme.text }}>Alte Daten wiederherstellen</h3>
+      {backups.length === 0 ? (
+        <p style={{ fontSize: 13, color: theme.textMuted, margin: 0 }}>Keine gesicherten Datenbestände gefunden.</p>
+      ) : (
+        <>
+          <p style={{ fontSize: 12, color: theme.textMuted, marginTop: 0, marginBottom: 16 }}>
+            Hast du deinen Wiederherstellungscode wiedergefunden, kannst du einen früheren Datenbestand zurückholen.
+            Der aktuelle Bestand wird dabei gesichert.
+          </p>
+          <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, color: theme.textMuted, marginBottom: 12 }}>
+            Sicherung
+            <select value={selected} onChange={(e) => setSelected(e.target.value)} style={inputStyle}>
+              {backups.map((b) => (
+                <option key={b.name} value={b.name}>
+                  {b.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, color: theme.textMuted, marginBottom: 12 }}>
+            Passwort oder Wiederherstellungscode dieser Sicherung
+            <input type="password" value={secret} onChange={(e) => setSecret(e.target.value)} style={inputStyle} />
+          </label>
+          {error && <p style={{ color: theme.danger, fontSize: 13, marginBottom: 12 }}>{error}</p>}
+          <button
+            type="button"
+            onClick={restore}
+            disabled={busy || !selected || !secret}
+            style={{ border: "none", background: theme.green, color: theme.onAccent, borderRadius: 6, padding: "8px 16px", fontSize: 13, cursor: "pointer", opacity: busy || !selected || !secret ? 0.5 : 1 }}
+          >
+            {busy ? "Stellt wieder her…" : "Wiederherstellen"}
+          </button>
+        </>
+      )}
+      {error && backups.length === 0 && <p style={{ color: theme.danger, fontSize: 13, marginTop: 10 }}>{error}</p>}
     </div>
   );
 }

@@ -591,6 +591,143 @@ pub fn vault_reset(app: tauri::AppHandle) -> Result<String, String> {
     Ok(backup_dir.to_string_lossy().to_string())
 }
 
+#[derive(Serialize)]
+pub struct BackupInfo {
+    /// Folder name (the id passed back to vault_restore).
+    pub name: String,
+    /// Human label derived from the folder's timestamp, e.g. "05.07.2026 12:34".
+    pub label: String,
+}
+
+/// "reset-backup-YYYY-MM-DD-HHMMSS" -> "DD.MM.YYYY HH:MM" for display.
+fn backup_label(name: &str) -> String {
+    let ts = name.strip_prefix(RESET_BACKUP_PREFIX).unwrap_or(name);
+    let parts: Vec<&str> = ts.split('-').collect();
+    if parts.len() == 4 && parts[3].len() == 6 {
+        return format!("{}.{}.{} {}:{}", parts[2], parts[1], parts[0], &parts[3][0..2], &parts[3][2..4]);
+    }
+    name.to_string()
+}
+
+/// Lists the restorable backups (reset-backup-* folders that still hold a
+/// vault.json + ciphertext), newest first. The timestamp is baked into the
+/// folder name, so this needs no metadata read.
+#[tauri::command]
+pub fn vault_list_backups(app: tauri::AppHandle) -> Result<Vec<BackupInfo>, String> {
+    let paths = resolve_vault_paths(&app)?;
+    let dir = paths.vault_json.parent().ok_or_else(|| "Datenverzeichnis nicht auffindbar.".to_string())?;
+    let mut out = Vec::new();
+    if let Ok(entries) = fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            let name = entry.file_name().to_string_lossy().to_string();
+            let path = entry.path();
+            if name.starts_with(RESET_BACKUP_PREFIX)
+                && path.is_dir()
+                && path.join("vault.json").exists()
+                && path.join("database.db.enc").exists()
+            {
+                out.push(BackupInfo { label: backup_label(&name), name });
+            }
+        }
+    }
+    // Folder names start with a sortable timestamp, so lexical desc = newest first.
+    out.sort_by(|a, b| b.name.cmp(&a.name));
+    Ok(out)
+}
+
+/// Restores a previously reset dataset and makes it the active one, keeping
+/// the current credentials (the current password/recovery code opens the
+/// restored data afterward).
+///
+/// The old backup is decrypted with its OWN old secret, then re-encrypted
+/// under the CURRENT DEK. The currently-active dataset is first copied aside
+/// into a fresh backup (so the choice is reversible - "einmalige Wahl beim
+/// Einlesen"), and the consumed source backup is removed. Any schema
+/// difference of the restored (older) database is reconciled by the sidecar's
+/// startup migration when it next launches against it.
+#[tauri::command]
+pub fn vault_restore(app: tauri::AppHandle, backup_name: String, secret: String) -> Result<(), String> {
+    let paths = resolve_vault_paths(&app)?;
+    let app_data_dir = paths
+        .vault_json
+        .parent()
+        .ok_or_else(|| "Datenverzeichnis nicht auffindbar.".to_string())?
+        .to_path_buf();
+
+    // Validate the backup (defend against path tricks: name must be a plain
+    // reset-backup-* folder directly in the data dir).
+    if !backup_name.starts_with(RESET_BACKUP_PREFIX) || backup_name.contains('/') || backup_name.contains('\\') {
+        return Err("Ungültige Sicherung.".to_string());
+    }
+    let backup_dir = app_data_dir.join(&backup_name);
+    let backup_json = backup_dir.join("vault.json");
+    let backup_enc = backup_dir.join("database.db.enc");
+    if !backup_dir.is_dir() || !backup_json.exists() || !backup_enc.exists() {
+        return Err("Diese Sicherung ist unvollständig oder nicht vorhanden.".to_string());
+    }
+
+    // Unwrap the old DEK with the provided secret, then decrypt the old
+    // database into memory. Any failure here aborts before anything changes.
+    let meta_json = fs::read_to_string(&backup_json).map_err(|e| format!("Konnte Sicherung nicht lesen: {e}"))?;
+    let backup_meta: VaultMeta = serde_json::from_str(&meta_json).map_err(|e| format!("Beschädigte Sicherung: {e}"))?;
+    let mut old_dek = unwrap_dek(&backup_meta.password_wrap, &secret, &backup_meta.kdf)
+        .or_else(|_| unwrap_dek(&backup_meta.recovery_wrap, &secret, &backup_meta.kdf))
+        .map_err(|_| "Falsches Passwort oder falscher Wiederherstellungscode.".to_string())?;
+    let old_nonce = BASE64
+        .decode(backup_meta.db_nonce.as_bytes())
+        .map_err(|e| format!("Beschädigte Sicherung: {e}"))?;
+    let old_cipher = fs::read(&backup_enc).map_err(|e| format!("Konnte Sicherung nicht lesen: {e}"))?;
+    let mut plaintext = aead_decrypt(&old_dek, &old_nonce, &old_cipher).map_err(|_| "Die Sicherung konnte nicht entschlüsselt werden.".to_string())?;
+    old_dek.zeroize();
+
+    // The current DEK (app is unlocked while in Settings) re-encrypts the
+    // restored data so the current password keeps working.
+    let current_dek = {
+        let state = app.state::<VaultState>();
+        let guard = state.0.lock().unwrap();
+        match guard.as_ref() {
+            Some(unlocked) => unlocked.dek,
+            None => {
+                plaintext.zeroize();
+                return Err("Der Tresor ist nicht entsperrt.".to_string());
+            }
+        }
+    };
+
+    // Order matters (same trap as vault_reset): stop the sidecar (holds the
+    // plaintext DB open) and clear VaultState before touching files, so
+    // reencrypt_on_exit can't write the old data back on shutdown.
+    if let Some(child) = app.state::<crate::SidecarState>().0.lock().unwrap().take() {
+        let _ = child.kill();
+    }
+    app.state::<VaultState>().0.lock().unwrap().take();
+
+    // Demote the currently-active dataset into its own backup (copy, not move:
+    // the live vault.json must stay in place for the current credentials).
+    let prev = app_data_dir.join(format!("{RESET_BACKUP_PREFIX}{}", format_timestamp(SystemTime::now())));
+    fs::create_dir_all(&prev).map_err(|e| format!("Konnte Sicherung nicht anlegen: {e}"))?;
+    if paths.enc_db.exists() {
+        let _ = fs::copy(&paths.enc_db, prev.join("database.db.enc"));
+    }
+    let _ = fs::copy(&paths.vault_json, prev.join("vault.json"));
+
+    // Re-encrypt the restored data under the current DEK and make it active.
+    let mut current_dek = current_dek;
+    let encrypt_result = aead_encrypt(&current_dek, &plaintext);
+    current_dek.zeroize();
+    plaintext.zeroize();
+    let (new_nonce, new_cipher) = encrypt_result?;
+    fs::write(&paths.enc_db, &new_cipher).map_err(|e| format!("Konnte Datenbank nicht schreiben: {e}"))?;
+    update_db_nonce(&paths.vault_json, &BASE64.encode(&new_nonce))?;
+    // Drop any stale plaintext working copy so the next unlock decrypts fresh.
+    let _ = fs::remove_file(&paths.plain_db);
+    // The source backup's data is now the live dataset - remove the duplicate.
+    let _ = fs::remove_dir_all(&backup_dir);
+
+    log::info!("Alte Daten aus {} wiederhergestellt; vorheriger Stand gesichert unter {}", backup_name, prev.display());
+    Ok(())
+}
+
 /// Called from the RunEvent::Exit handler in lib.rs: re-encrypts the
 /// plaintext working copy and deletes it, so nothing sensitive remains on
 /// disk while the app isn't running. Best-effort - RunEvent::Exit can't
@@ -852,6 +989,44 @@ mod tests {
         assert_eq!(fs::read_to_string(backup.join("database.db.enc")).unwrap(), "cipher");
         assert!(!backup.join("vault.json.bak").exists());
         fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn restore_reencrypts_old_backup_under_the_current_dek() {
+        // vault_restore's core: decrypt the backup with its OLD dek, then
+        // re-encrypt under the CURRENT dek so the current password opens it.
+        let params = fast_params();
+        let old_dek = random_dek();
+        let current_dek = random_dek();
+        let plaintext = b"restored season data".to_vec();
+
+        // Old backup: encrypted DB + a vault.json wrapping old_dek.
+        let (old_nonce, old_cipher) = aead_encrypt(&old_dek, &plaintext).unwrap();
+        let backup_wrap = wrap_dek(&old_dek, "altes-passwort", &params).unwrap();
+        let recovered = unwrap_dek(&backup_wrap, "altes-passwort", &params).unwrap();
+        let decrypted = aead_decrypt(&recovered, &old_nonce, &old_cipher).unwrap();
+        assert_eq!(decrypted, plaintext);
+
+        // Re-encrypt under the current dek and confirm it round-trips there.
+        let (new_nonce, new_cipher) = aead_encrypt(&current_dek, &decrypted).unwrap();
+        assert_eq!(aead_decrypt(&current_dek, &new_nonce, &new_cipher).unwrap(), plaintext);
+        // The old dek must no longer open the re-encrypted data.
+        assert!(aead_decrypt(&old_dek, &new_nonce, &new_cipher).is_err());
+    }
+
+    #[test]
+    fn restore_rejects_a_wrong_backup_secret() {
+        let params = fast_params();
+        let old_dek = random_dek();
+        let wrap = wrap_dek(&old_dek, "richtig", &params).unwrap();
+        assert!(unwrap_dek(&wrap, "falsch", &params).is_err());
+    }
+
+    #[test]
+    fn backup_label_formats_the_folder_timestamp() {
+        assert_eq!(backup_label("reset-backup-2026-07-05-123456"), "05.07.2026 12:34");
+        // Unparseable names fall back to the raw name.
+        assert_eq!(backup_label("reset-backup-weird"), "reset-backup-weird");
     }
 
     #[test]

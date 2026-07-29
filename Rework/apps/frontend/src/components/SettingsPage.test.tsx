@@ -10,7 +10,13 @@ vi.mock("../api/client", () => ({
 }));
 
 function markAsTauri() {
-  Object.defineProperty(window, "__TAURI_INTERNALS__", { value: {}, configurable: true });
+  // Route the real @tauri core's invoke to the same mock too, so it doesn't
+  // matter whether a dynamic import resolves to the mocked module or the real
+  // one - both end up calling invokeMock.
+  Object.defineProperty(window, "__TAURI_INTERNALS__", {
+    value: { invoke: (...args: unknown[]) => invokeMock(...args) },
+    configurable: true,
+  });
 }
 
 function unmarkTauri() {
@@ -21,7 +27,9 @@ const user = { id: 1, email: "admin@example.com", realName: "Admin" };
 
 describe("SettingsPage", () => {
   beforeEach(() => {
-    invokeMock.mockReset();
+    // Default so the restore section's vault_list_backups mount call resolves
+    // cleanly; individual tests override for vault_change_password etc.
+    invokeMock.mockReset().mockResolvedValue([]);
     vi.mocked(api.getSettings).mockReset().mockResolvedValue({ headerLine1: null, headerLine2: null, hasLogo: false });
     vi.mocked(api.updateSettings).mockReset().mockResolvedValue({ headerLine1: null, headerLine2: null, hasLogo: false });
     vi.mocked(api.getUsers).mockReset().mockResolvedValue([]);
@@ -50,6 +58,52 @@ describe("SettingsPage", () => {
     expect(screen.getByText("Tresor-Passwort ändern")).toBeInTheDocument();
   });
 
+  describe("vault restore section", () => {
+    beforeEach(() => markAsTauri());
+
+    it("lists found backups and restores the chosen one with the entered secret", async () => {
+      invokeMock.mockImplementation((cmd: string) => {
+        if (cmd === "vault_list_backups") return Promise.resolve([{ name: "reset-backup-2026-07-05-120000", label: "05.07.2026 12:00" }]);
+        return Promise.resolve(undefined);
+      });
+      render(<SettingsPage user={null} />);
+
+      expect(await screen.findByText("05.07.2026 12:00")).toBeInTheDocument();
+      const secret = screen.getByLabelText(/Passwort oder Wiederherstellungscode dieser Sicherung/);
+      fireEvent.change(secret, { target: { value: "MEIN-CODE" } });
+      fireEvent.click(screen.getByRole("button", { name: "Wiederherstellen" }));
+
+      await waitFor(() =>
+        expect(
+          invokeMock.mock.calls.some(
+            (c) => c[0] === "vault_restore" && (c[1] as { backupName?: string })?.backupName === "reset-backup-2026-07-05-120000" && (c[1] as { secret?: string })?.secret === "MEIN-CODE",
+          ),
+        ).toBe(true),
+      );
+      expect(await screen.findByText(/Die alten Daten sind jetzt aktiv/)).toBeInTheDocument();
+    });
+
+    it("shows an empty-state message when there are no backups", async () => {
+      invokeMock.mockResolvedValue([]);
+      render(<SettingsPage user={null} />);
+      expect(await screen.findByText("Keine gesicherten Datenbestände gefunden.")).toBeInTheDocument();
+    });
+
+    it("surfaces a rejected restore (wrong secret) as an error", async () => {
+      invokeMock.mockImplementation((cmd: string) => {
+        if (cmd === "vault_list_backups") return Promise.resolve([{ name: "reset-backup-2026-07-05-120000", label: "05.07.2026 12:00" }]);
+        return Promise.reject("Falsches Passwort oder falscher Wiederherstellungscode.");
+      });
+      render(<SettingsPage user={null} />);
+
+      const secret = await screen.findByLabelText(/Passwort oder Wiederherstellungscode dieser Sicherung/);
+      fireEvent.change(secret, { target: { value: "falsch" } });
+      fireEvent.click(screen.getByRole("button", { name: "Wiederherstellen" }));
+
+      expect(await screen.findByText("Falsches Passwort oder falscher Wiederherstellungscode.")).toBeInTheDocument();
+    });
+  });
+
   it("shows account/user-management sections only when a user is logged in", () => {
     render(<SettingsPage user={user} />);
 
@@ -74,7 +128,7 @@ describe("SettingsPage", () => {
       fillAndSubmit("altesPasswort", "kurz", "kurz");
 
       expect(await screen.findByText("Das Passwort muss mindestens 8 Zeichen lang sein.")).toBeInTheDocument();
-      expect(invokeMock).not.toHaveBeenCalled();
+      expect(invokeMock).not.toHaveBeenCalledWith("vault_change_password", expect.anything());
     });
 
     it("blocks mismatched confirmation without calling invoke", async () => {
@@ -83,7 +137,7 @@ describe("SettingsPage", () => {
       fillAndSubmit("altesPasswort", "neuesPasswort1", "andereseins");
 
       expect(await screen.findByText("Die neuen Passwörter stimmen nicht überein.")).toBeInTheDocument();
-      expect(invokeMock).not.toHaveBeenCalled();
+      expect(invokeMock).not.toHaveBeenCalledWith("vault_change_password", expect.anything());
     });
 
     it("calls vault_change_password with the entered values and shows success", async () => {
@@ -93,10 +147,11 @@ describe("SettingsPage", () => {
       fillAndSubmit("altesPasswort", "neuesPasswort1", "neuesPasswort1");
 
       await waitFor(() =>
-        expect(invokeMock).toHaveBeenCalledWith("vault_change_password", {
-          currentSecret: "altesPasswort",
-          newPassword: "neuesPasswort1",
-        }),
+        expect(
+          invokeMock.mock.calls.some(
+            (c) => c[0] === "vault_change_password" && (c[1] as { currentSecret?: string })?.currentSecret === "altesPasswort" && (c[1] as { newPassword?: string })?.newPassword === "neuesPasswort1",
+          ),
+        ).toBe(true),
       );
       expect(await screen.findByText("Tresor-Passwort wurde geändert.")).toBeInTheDocument();
     });
