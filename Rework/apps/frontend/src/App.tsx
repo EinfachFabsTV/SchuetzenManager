@@ -66,6 +66,7 @@ export default function App() {
                   seasonId={view.id}
                   section={section}
                   user={user}
+                  onNavigate={setSection}
                   onDeleted={() => {
                     reloadSeasons();
                     setView({ kind: "empty" });

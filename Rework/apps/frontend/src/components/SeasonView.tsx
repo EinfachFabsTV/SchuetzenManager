@@ -16,11 +16,13 @@ export function SeasonView({
   section,
   user,
   onDeleted,
+  onNavigate,
 }: {
   seasonId: number;
   section: string;
   user: AuthUser | null;
   onDeleted: () => void;
+  onNavigate: (section: string) => void;
 }) {
   const [season, setSeason] = useState<SeasonDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -82,7 +84,7 @@ export function SeasonView({
 
       {section === "Übersicht" && <OverviewTab season={season} />}
       {section === "Mannschaften" && <TeamsTab season={season} onTeamUpdated={refresh} />}
-      {section === "Wettkämpfe" && <MatchesTab season={season} onMatchSaved={refresh} />}
+      {section === "Wettkämpfe" && <MatchesTab season={season} onMatchSaved={refresh} onNavigate={onNavigate} />}
       {section === "Schützen/innen" && <ShootersTab seasonId={season.id} />}
       {section === "Termine & Info" && <DatesInfoTab season={season} onUpdated={refresh} />}
       {section === "Verantwortliche" && user && <ResponsibleTab seasonId={season.id} teams={season.teams} />}

@@ -5,8 +5,33 @@ function isTauri(): boolean {
   return "__TAURI_INTERNALS__" in window;
 }
 
+const SUPPORT_URL = "https://projects.orfabs.de/contact";
+
+// Opens the support page in the system browser. Inside Tauri the shell
+// opener is used so it lands in the real browser instead of the app webview;
+// on the web it's a normal new-tab link.
+async function openSupport() {
+  if (isTauri()) {
+    const { open } = await import("@tauri-apps/plugin-shell");
+    await open(SUPPORT_URL);
+  } else {
+    window.open(SUPPORT_URL, "_blank", "noopener");
+  }
+}
+
+const linkStyle: React.CSSProperties = {
+  border: "none",
+  background: "transparent",
+  color: theme.textMuted,
+  fontSize: 11,
+  cursor: "pointer",
+  textDecoration: "underline",
+  padding: 0,
+};
+
 // Bottom-left: shows the installed version and a button to check for
-// updates manually (in addition to the automatic check on startup).
+// updates manually (in addition to the automatic check on startup), plus a
+// "Fehler melden" link to the support page.
 export function VersionFooter() {
   const [version, setVersion] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
@@ -38,20 +63,20 @@ export function VersionFooter() {
     }
   }
 
-  if (!isTauri()) return null;
-
   return (
     <div style={{ marginTop: 8, fontSize: 11, color: theme.textMuted }}>
-      <div>Version {version ?? "…"}</div>
-      <button
-        type="button"
-        onClick={checkForUpdates}
-        disabled={busy}
-        style={{ marginTop: 4, border: "none", background: "transparent", color: theme.textMuted, fontSize: 11, cursor: busy ? "default" : "pointer", textDecoration: "underline", padding: 0 }}
-      >
-        {busy ? "Prüft…" : "Auf Updates prüfen"}
+      {isTauri() && (
+        <>
+          <div>Version {version ?? "…"}</div>
+          <button type="button" onClick={checkForUpdates} disabled={busy} style={{ ...linkStyle, marginTop: 4, cursor: busy ? "default" : "pointer" }}>
+            {busy ? "Prüft…" : "Auf Updates prüfen"}
+          </button>
+          {status && <div style={{ marginTop: 4, color: theme.green }}>{status}</div>}
+        </>
+      )}
+      <button type="button" onClick={openSupport} style={{ ...linkStyle, marginTop: 4 }}>
+        Fehler melden
       </button>
-      {status && <div style={{ marginTop: 4, color: theme.green }}>{status}</div>}
     </div>
   );
 }

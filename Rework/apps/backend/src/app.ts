@@ -37,6 +37,21 @@ export async function buildApp(options?: { logger?: boolean }) {
     methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   });
 
+  // Turn unhandled exceptions into a readable German { error } payload
+  // instead of Fastify's bare "Internal Server Error". Known cases in the
+  // routes already reply with reply.code(...) + { error: "..." }; this is
+  // the safety net for the unexpected rest, so the frontend (which reads
+  // body.error) always has something meaningful to show on a failed save.
+  // Internal details are logged, never leaked to the client.
+  app.setErrorHandler((error, request, reply) => {
+    request.log.error(error);
+    const status = typeof error.statusCode === "number" && error.statusCode >= 400 && error.statusCode < 600 ? error.statusCode : 500;
+    // 4xx (e.g. schema validation) carry a useful message; 5xx must not
+    // expose internals, so they get a generic, actionable German text.
+    const message = status < 500 ? error.message || "Ungültige Anfrage." : "Beim Verarbeiten ist ein unerwarteter Fehler aufgetreten. Bitte versuche es erneut.";
+    reply.code(status).send({ error: message });
+  });
+
   app.get("/health", async () => ({ status: "ok" }));
 
   await app.register(authRoutes, { prefix: "/api" });
