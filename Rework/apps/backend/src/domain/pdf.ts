@@ -140,15 +140,16 @@ function drawScheduleHeader(w: PageWriter, season: PdfSeason, logoImage: PDFImag
   }
   if (season.headerLine1) w.text(season.headerLine1, textLeft, top - 14, { size: 14, bold: true });
   if (season.headerLine2) w.text(season.headerLine2, textLeft, top - 30, { size: 9 });
-  w.y = top - (logoImage ? 48 : 34) - 18;
+  w.y = top - (logoImage ? 48 : 36) - 24;
 
   w.text("Rundenwettkämpfe", PAGE_MARGIN, w.y, { size: 20, bold: true });
-  const labelWidth = w.bold.widthOfTextAtSize(season.label, 12);
-  w.text(season.label, w.width - PAGE_MARGIN - labelWidth, w.y + 4, { size: 12, bold: true });
-  const seasonText = `Saison ${season.year}`;
-  const seasonWidth = w.font.widthOfTextAtSize(seasonText, 11);
-  w.text(seasonText, w.width - PAGE_MARGIN - seasonWidth, w.y - 12, { size: 11 });
-  w.y -= 30;
+  w.y -= 22;
+  // Season on the left below the title, the class label right-aligned on the
+  // same line - as in the printed original.
+  w.text(`Saison ${season.year}`, PAGE_MARGIN, w.y, { size: 12 });
+  const labelWidth = w.font.widthOfTextAtSize(season.label, 12);
+  w.text(season.label, w.width - PAGE_MARGIN - labelWidth, w.y, { size: 12 });
+  w.y -= 16;
   w.line(PAGE_MARGIN, w.y, w.width - PAGE_MARGIN, w.y);
   w.y -= 18;
 }
@@ -261,14 +262,22 @@ function drawDates(w: PageWriter, season: PdfSeason, teams: PdfTeam[], matchesBy
     const weeks = matchesByWeek.filter((week) => week.length > 0 && roundOfWeek(week[0].week, maxWeek) === round);
     if (weeks.length === 0) continue;
     w.ensureSpace(ROW_HEIGHT * 3);
-    w.text(round === "hin" ? "Hinrunde" : "Rückrunde", PAGE_MARGIN, w.y, { size: 13, bold: true });
-    w.y -= ROW_HEIGHT;
+    // Centered round heading between two rules, as in the printed original.
+    const heading = round === "hin" ? "Hinrunde" : "Rückrunde";
+    const headingWidth = w.bold.widthOfTextAtSize(heading, 11);
+    w.text(heading, (w.width - headingWidth) / 2, w.y, { size: 11, bold: true });
+    w.y -= 12;
+    w.line(PAGE_MARGIN, w.y, w.width - PAGE_MARGIN, w.y);
+    w.y -= 14;
     for (const week of weeks) drawScheduleBlock(w, week);
     w.y -= 8;
   }
 
   w.y -= 6;
-  w.ensureSpace(ROW_HEIGHT * (teams.length + 2));
+  // Only require room for the heading plus a couple of rows: drawTable breaks
+  // per row anyway, so demanding space for the whole table pushed it onto a
+  // second page even when it comfortably fit under the schedule.
+  w.ensureSpace(ROW_HEIGHT * 4);
   w.text("Mannschaften", PAGE_MARGIN, w.y, { size: 14, bold: true });
   w.y -= 22;
 
@@ -276,7 +285,8 @@ function drawDates(w: PageWriter, season: PdfSeason, teams: PdfTeam[], matchesBy
   const dayWidth = columnWidth(w.bold, "Trainingstag", teams.map((t) => t.trainingDay ?? "-"));
   const timeWidth = columnWidth(w.bold, "Uhrzeit", teams.map((t) => t.trainingTime ?? "-"));
   const locationWidth = columnWidth(w.bold, "Ort", teams.map((t) => t.location ?? "-"));
-  const contactWidth = columnWidth(w.bold, "Ansprechpartner", teams.map((t) => t.contact ?? "-"));
+  const contactWidth = columnWidth(w.bold, "Kontaktperson", teams.map((t) => t.contact ?? "-"));
+  const phoneWidth = columnWidth(w.bold, "Kontakt", teams.map((t) => t.phone ?? "-"));
 
   drawTable(
     w,
@@ -285,7 +295,8 @@ function drawDates(w: PageWriter, season: PdfSeason, teams: PdfTeam[], matchesBy
       { header: "Trainingstag", width: dayWidth, get: (t: PdfTeam) => t.trainingDay ?? "-" },
       { header: "Uhrzeit", width: timeWidth, get: (t: PdfTeam) => t.trainingTime ?? "-" },
       { header: "Ort", width: locationWidth, get: (t: PdfTeam) => t.location ?? "-" },
-      { header: "Ansprechpartner", width: contactWidth, get: (t: PdfTeam) => t.contact ?? "-" },
+      { header: "Kontaktperson", width: contactWidth, get: (t: PdfTeam) => t.contact ?? "-" },
+      { header: "Kontakt", width: phoneWidth, get: (t: PdfTeam) => t.phone ?? "-" },
     ],
     teams,
   );

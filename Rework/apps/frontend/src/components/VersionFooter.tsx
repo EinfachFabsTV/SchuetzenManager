@@ -64,17 +64,17 @@ export function VersionFooter() {
   }
 
   return (
-    <div style={{ marginTop: 8, fontSize: 11, color: theme.textMuted }}>
+    <div style={{ marginTop: 8, fontSize: 11, color: theme.textMuted, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 4 }}>
       {isTauri() && (
         <>
           <div>Version {version ?? "…"}</div>
-          <button type="button" onClick={checkForUpdates} disabled={busy} style={{ ...linkStyle, marginTop: 4, cursor: busy ? "default" : "pointer" }}>
+          <button type="button" onClick={checkForUpdates} disabled={busy} style={{ ...linkStyle, cursor: busy ? "default" : "pointer" }}>
             {busy ? "Prüft…" : "Auf Updates prüfen"}
           </button>
-          {status && <div style={{ marginTop: 4, color: theme.green }}>{status}</div>}
+          {status && <div style={{ color: theme.green }}>{status}</div>}
         </>
       )}
-      <button type="button" onClick={openSupport} style={{ ...linkStyle, marginTop: 4 }}>
+      <button type="button" onClick={openSupport} style={linkStyle}>
         Fehler melden
       </button>
     </div>
