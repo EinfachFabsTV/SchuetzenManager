@@ -1,0 +1,119 @@
+BEISPIELE FÜR status.json
+=========================
+
+Kurzanleitung
+-------------
+Diese Datei ist nur eine Vorlagensammlung – sie wird vom Programm NICHT gelesen.
+Zum Anzeigen einer Meldung den gewünschten Block kopieren und damit den Inhalt
+von "status.json" ersetzen (im selben Ordner), dann committen und pushen.
+
+Die Meldung erscheint innerhalb weniger Minuten in jeder laufenden
+Installation und kann vom Nutzer weggeklickt werden.
+
+Felder
+------
+  active    true  = Meldung anzeigen
+            false = nichts anzeigen (Meldung bleibt für später gespeichert)
+
+  id        Kennung der Meldung. WICHTIG: Eine NEUE id sorgt dafür, dass die
+            Meldung auch bei Nutzern wieder erscheint, die die vorherige
+            bereits weggeklickt haben. Bewährt: Datum + Stichwort,
+            z. B. "2026-08-03-pdf-fehler".
+
+  level     "info"    = neutraler Hinweis
+            "warning" = rot hervorgehoben (Störungen, Datenverlust-Gefahr)
+
+  title     Fette Überschrift (optional, aber empfohlen)
+
+  message   Der eigentliche Text. Anführungszeichen im Text mit \" schreiben.
+
+Faustregel: sagen, WAS los ist, WAS der Nutzer tun soll und ob er WARTEN muss.
+
+
+-------------------------------------------------------------------------
+1) Bekannter Fehler – wird bearbeitet
+-------------------------------------------------------------------------
+{
+  "active": true,
+  "id": "2026-08-03-pdf-fehler",
+  "level": "warning",
+  "title": "Bekannter Fehler beim PDF-Export",
+  "message": "Beim Export mit sehr vielen Mannschaften fehlt die letzte Zeile. Wir arbeiten bereits daran und liefern in den nächsten Tagen ein Update. Bis dahin: Export in zwei Teilen erstellen."
+}
+
+-------------------------------------------------------------------------
+2) Fehler behoben – Update installieren
+-------------------------------------------------------------------------
+{
+  "active": true,
+  "id": "2026-08-05-pdf-behoben",
+  "level": "info",
+  "title": "Fehler behoben",
+  "message": "Der Fehler beim PDF-Export ist mit Version 0.2.2 behoben. Bitte das angebotene Update installieren."
+}
+
+-------------------------------------------------------------------------
+3) Wartung angekündigt (betrifft nur den Web-Zugriff)
+-------------------------------------------------------------------------
+{
+  "active": true,
+  "id": "2026-08-07-wartung",
+  "level": "warning",
+  "title": "Wartung am Freitag",
+  "message": "Am Freitag zwischen 18 und 20 Uhr ist der Web-Zugriff nicht erreichbar. Das Programm auf deinem Rechner funktioniert normal weiter."
+}
+
+-------------------------------------------------------------------------
+4) Dringende Warnung – Datenverlust vermeiden
+-------------------------------------------------------------------------
+{
+  "active": true,
+  "id": "2026-08-10-nicht-aktualisieren",
+  "level": "warning",
+  "title": "Bitte vorerst nicht aktualisieren",
+  "message": "In Version 0.2.3 wurde ein Fehler entdeckt, der Termine falsch speichert. Bitte das Update noch NICHT installieren. Eine korrigierte Version folgt heute Abend."
+}
+
+-------------------------------------------------------------------------
+5) Erinnerung an den Wiederherstellungscode
+-------------------------------------------------------------------------
+{
+  "active": true,
+  "id": "2026-08-12-code-erinnerung",
+  "level": "info",
+  "title": "Hast du deinen Wiederherstellungscode?",
+  "message": "Ohne Passwort UND Wiederherstellungscode sind die Daten nicht mehr zu öffnen. Falls noch nicht geschehen: Code ausdrucken und sicher ablegen."
+}
+
+-------------------------------------------------------------------------
+6) Saisonstart / organisatorischer Hinweis
+-------------------------------------------------------------------------
+{
+  "active": true,
+  "id": "2026-09-01-saisonstart",
+  "level": "info",
+  "title": "Saison 2026/27 startet",
+  "message": "Die Termine der neuen Saison stehen fest. Bitte Ergebnisse jeweils bis Sonntagabend eintragen."
+}
+
+-------------------------------------------------------------------------
+7) Rückfrage an die Nutzer
+-------------------------------------------------------------------------
+{
+  "active": true,
+  "id": "2026-08-15-rueckmeldung",
+  "level": "info",
+  "title": "Läuft alles?",
+  "message": "Falls dir etwas auffällt oder fehlt: unten links auf „Fehler melden“ klicken. Auch kleine Hinweise helfen."
+}
+
+-------------------------------------------------------------------------
+8) Meldung ausschalten (Normalzustand)
+-------------------------------------------------------------------------
+{
+  "active": false,
+  "id": "aus",
+  "level": "info",
+  "title": "",
+  "message": ""
+}

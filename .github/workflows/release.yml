@@ -30,6 +30,14 @@ jobs:
             // [pflicht] marker as a mandatory update. Only tags listed here are
             // mandatory; every other release stays optional by default.
             const NOTES = {
+              'v0.2.1':
+                '[pflicht] Pflicht-Update auf Version 0.2.1.\n\n' +
+                'Behoben:\n' +
+                '- Nach einer Neuinstallation musste das Programm einmal neu gestartet werden, bevor sich Daten eintragen ließen. Der Dienst bekommt beim ersten Start jetzt deutlich mehr Zeit (Virenprüfung, kalter Start) und wird richtig auf Bereitschaft geprüft.\n' +
+                '- PDF-Export: Ein Abschnitt rutschte auf die nächste Seite, wenn nur ein bis zwei Zeilen fehlten. Solche Abschnitte werden jetzt leicht verkleinert und bleiben zusammen.\n\n' +
+                'Neu:\n' +
+                '- Hinweise vom Betreiber können direkt im Programm angezeigt und weggeklickt werden.\n\n' +
+                'Deine Daten bleiben beim Update unverändert erhalten.',
               'v0.2.0':
                 '[pflicht] Pflicht-Update auf Version 0.2.0.\n\n' +
                 'Neu:\n' +
