@@ -9,6 +9,7 @@ import { SplashScreen } from "./components/SplashScreen";
 import { SettingsPage } from "./components/SettingsPage";
 import { UpdateNotice } from "./components/UpdateNotice";
 import { Tour } from "./components/Tour";
+import { StatusNotice } from "./components/StatusNotice";
 import { TOUR_STEPS, stepsToAutoRun, markStepsDone, resetTourProgress, type TourStep } from "./lib/tour";
 import { theme } from "./theme";
 
@@ -80,6 +81,9 @@ export default function App() {
               onLogout={onLogout}
             />
             <main style={{ flex: 1, minWidth: 0, padding: "24px 32px" }}>
+              {/* Sits in the content flow rather than fixed at the top, so it
+                  cannot collide with the update banner and has room for text. */}
+              <StatusNotice />
               {view.kind === "empty" && <p style={{ color: theme.textMuted }}>Wähle eine Saison aus oder lege eine neue an.</p>}
               {view.kind === "create" && (
                 <CreateSeasonForm

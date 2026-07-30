@@ -274,16 +274,57 @@ fn update_db_nonce(vault_json_path: &Path, new_nonce: &str) -> Result<(), String
     Ok(())
 }
 
-fn wait_for_port(port: u16, timeout: Duration) -> Result<(), String> {
+/// How long to wait for the backend to answer before giving up.
+///
+/// Deliberately generous. The very first start after an installation is by
+/// far the slowest one: Windows Defender scans the freshly written
+/// executables, the Prisma query engine initialises cold, and the sidecar
+/// additionally runs `prisma migrate deploy` as a child process *before* it
+/// starts listening. The previous 5-second budget was regularly missed there,
+/// which aborted vault_setup even though the vault itself had been created
+/// correctly - the user then had to restart the app once before anything
+/// worked. Waiting longer costs nothing in the normal case (the loop exits as
+/// soon as the backend answers) and removes that first-run failure.
+const BACKEND_READY_TIMEOUT: Duration = Duration::from_secs(90);
+
+/// Waits until the backend actually answers a request, not merely until the
+/// TCP port is accepting connections. A bound socket is not proof that the
+/// server can serve - polling /health is.
+fn wait_for_backend(port: u16, timeout: Duration) -> Result<(), String> {
+    use std::io::{Read, Write};
+
     let deadline = Instant::now() + timeout;
+    let mut last_problem = String::from("keine Antwort");
     loop {
-        if TcpStream::connect(("127.0.0.1", port)).is_ok() {
-            return Ok(());
+        match TcpStream::connect(("127.0.0.1", port)) {
+            Ok(mut stream) => {
+                let _ = stream.set_read_timeout(Some(Duration::from_secs(5)));
+                let request = "GET /health HTTP/1.0\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n";
+                if stream.write_all(request.as_bytes()).is_ok() {
+                    let mut response = String::new();
+                    if stream.read_to_string(&mut response).is_ok() {
+                        if response.contains(" 200") {
+                            return Ok(());
+                        }
+                        last_problem = "Backend antwortet, meldet aber keinen Bereitschaftsstatus".to_string();
+                    } else {
+                        last_problem = "Antwort des Backends nicht lesbar".to_string();
+                    }
+                } else {
+                    last_problem = "Anfrage an das Backend fehlgeschlagen".to_string();
+                }
+            }
+            Err(e) => last_problem = e.to_string(),
         }
         if Instant::now() >= deadline {
-            return Err("Backend wurde nicht rechtzeitig bereit.".to_string());
+            return Err(format!(
+                "Der Programm-Dienst wurde nicht rechtzeitig bereit ({} Sekunden gewartet, zuletzt: {last_problem}). \
+                 Beim ersten Start nach einer Installation kann das an einer Virenprüfung liegen. \
+                 Starte das Programm bitte neu - deine Einrichtung bleibt erhalten.",
+                timeout.as_secs()
+            ));
         }
-        std::thread::sleep(Duration::from_millis(100));
+        std::thread::sleep(Duration::from_millis(200));
     }
 }
 
@@ -357,7 +398,7 @@ pub fn vault_setup(app: tauri::AppHandle, password: String) -> Result<String, St
 
     let child = crate::start_backend_sidecar(&app, &paths.plain_db)?;
     app.state::<crate::SidecarState>().0.lock().unwrap().replace(child);
-    wait_for_port(BACKEND_PORT, Duration::from_secs(5))?;
+    wait_for_backend(BACKEND_PORT, BACKEND_READY_TIMEOUT)?;
 
     Ok(recovery_code)
 }
@@ -426,7 +467,7 @@ pub fn vault_unlock(app: tauri::AppHandle, secret: String) -> Result<(), String>
 
     let child = crate::start_backend_sidecar(&app, &paths.plain_db)?;
     app.state::<crate::SidecarState>().0.lock().unwrap().replace(child);
-    wait_for_port(BACKEND_PORT, Duration::from_secs(5))?;
+    wait_for_backend(BACKEND_PORT, BACKEND_READY_TIMEOUT)?;
 
     Ok(())
 }
@@ -1020,6 +1061,43 @@ mod tests {
         let old_dek = random_dek();
         let wrap = wrap_dek(&old_dek, "richtig", &params).unwrap();
         assert!(unwrap_dek(&wrap, "falsch", &params).is_err());
+    }
+
+    #[test]
+    fn wait_for_backend_accepts_a_healthy_server() {
+        // A bound port alone used to count as "ready"; now the backend has to
+        // actually answer. Serve one canned 200 and confirm we're satisfied.
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = listener.local_addr().unwrap().port();
+        std::thread::spawn(move || {
+            use std::io::{BufRead, BufReader, Write};
+            // Serve repeatedly: the caller polls, so one-shot would make the
+            // test depend on hitting the single accept.
+            for stream in listener.incoming().flatten() {
+                let mut stream = stream;
+                // Drain the request line first - answering without reading can
+                // reset the connection before the client finishes writing.
+                let mut reader = BufReader::new(stream.try_clone().unwrap());
+                let mut line = String::new();
+                let _ = reader.read_line(&mut line);
+                let _ = stream.write_all(b"HTTP/1.0 200 OK\r\nContent-Length: 15\r\n\r\n{\"status\":\"ok\"}");
+                let _ = stream.flush();
+            }
+        });
+        assert!(wait_for_backend(port, Duration::from_secs(10)).is_ok());
+    }
+
+    #[test]
+    fn wait_for_backend_times_out_with_an_actionable_message() {
+        // Nothing is listening on this port, so this must fail - and the
+        // message has to tell the user what to do rather than just "Fehler".
+        let free_port = {
+            let l = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+            l.local_addr().unwrap().port()
+        };
+        let err = wait_for_backend(free_port, Duration::from_millis(300)).unwrap_err();
+        assert!(err.contains("nicht rechtzeitig bereit"), "unerwartet: {err}");
+        assert!(err.contains("neu"), "sollte zum Neustart raten: {err}");
     }
 
     #[test]

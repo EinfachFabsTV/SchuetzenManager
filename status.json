@@ -1,0 +1,7 @@
+{
+  "active": false,
+  "id": "2026-07-30-beispiel",
+  "level": "info",
+  "title": "Hinweis",
+  "message": "Dies ist eine Beispielmeldung. Setze \"active\" auf true, um sie in allen Installationen anzuzeigen."
+}

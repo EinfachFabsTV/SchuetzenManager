@@ -134,6 +134,31 @@ Die App prüft beim Start im Hintergrund, ob eine neuere Version vorliegt:
 
 **Deine Daten gehen dabei nie verloren.** Die verschlüsselte Datenbank liegt in deinem Benutzerprofil und wird vom Installer nicht angefasst. Zusätzlich legt die App bei jedem Entsperren eine Sicherungskopie an, und bestehende Datenbanken werden beim Start automatisch auf das aktuelle Format gebracht.
 
+## Hinweis an alle Installationen senden
+
+Über die Datei [`status.json`](status.json) im Repository lässt sich eine
+Meldung in **jeder laufenden Installation** anzeigen — ohne neues Release, ohne
+Build. Datei bearbeiten, committen, fertig; die Meldung erscheint innerhalb
+weniger Minuten und lässt sich vom Nutzer wegklicken.
+
+```json
+{
+  "active": true,
+  "id": "2026-08-01-wartung",
+  "level": "warning",
+  "title": "Wartung am Freitag",
+  "message": "Der Web-Zugriff ist am Freitag zwischen 18 und 20 Uhr nicht erreichbar."
+}
+```
+
+| Feld | Bedeutung |
+|---|---|
+| `active` | `false` blendet die Meldung überall aus |
+| `id` | Kennung der Meldung. **Neue `id` = die Meldung erscheint erneut**, auch bei Nutzern, die die vorherige weggeklickt haben |
+| `level` | `info` (neutral) oder `warning` (rot hervorgehoben) |
+| `title` | optionale fette Überschrift |
+| `message` | der Text |
+
 ## Hilfe
 
 <details>
@@ -185,13 +210,13 @@ Ursprünglich entwickelt von **Christian Kater** als Java-8/JavaFX-Anwendung fü
 
 ### Tests
 
-**166 automatisierte Tests**, bei jedem Push und Pull Request per [CI](.github/workflows/ci.yml) ausgeführt (Lint, Typprüfung, Tests, Build):
+**185 automatisierte Tests**, bei jedem Push und Pull Request per [CI](.github/workflows/ci.yml) ausgeführt (Lint, Typprüfung, Tests, Build):
 
 | Bereich | Umfang | Inhalt |
 |---|---|---|
-| Backend | 51 | Domänenlogik (Spielplan, Tabelle, Einzelwertung, PDF) und alle HTTP-Routen end-to-end gegen eine echte temporäre Datenbank |
-| Frontend | 99 | Vitest + Testing Library: Formularlogik, Login-Gate, Tresor-Dialoge, Tour-Steuerung, Ansichts-Umschalter |
-| Desktop (Rust) | 16 | Verschlüsselung des Datentresors: Schlüsselableitung, Passwortwechsel, Zurücksetzen, Wiederherstellen |
+| Backend | 58 | Domänenlogik (Spielplan, Tabelle, Einzelwertung, PDF-Seitenumbruch) und alle HTTP-Routen end-to-end gegen eine echte temporäre Datenbank |
+| Frontend | 109 | Vitest + Testing Library: Formularlogik, Login-Gate, Tresor-Dialoge, Tour-Steuerung, Ansichts-Umschalter, Statusmeldung |
+| Desktop (Rust) | 18 | Verschlüsselung des Datentresors: Schlüsselableitung, Passwortwechsel, Zurücksetzen, Wiederherstellen, Bereitschaftsprüfung des Dienstes |
 
 Architektur, Entwicklungs-Setup, Verifikationsprotokolle und offene Punkte: **[TECHNICAL.md](TECHNICAL.md)**.
 

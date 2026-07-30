@@ -66,12 +66,20 @@ function roundOfWeek(week: number, maxWeek: number): "hin" | "rueck" {
   return week <= Math.ceil(maxWeek / 2) ? "hin" : "rueck";
 }
 
+// How far a section may be shrunk to avoid being torn across a page break.
+// 0.72 still prints legibly at the 10pt base size; below that the gain in
+// tidiness isn't worth the loss in readability, so the section moves to the
+// next page instead.
+const MIN_SECTION_SCALE = 0.72;
+
 class PageWriter {
   doc: PDFDocument;
   font: PDFFont;
   bold: PDFFont;
   page!: PDFPage;
   y = 0;
+  /** Multiplies every font size and row height while a section is drawn. */
+  scale = 1;
   readonly width: number;
   readonly height: number;
 
@@ -81,6 +89,19 @@ class PageWriter {
     this.bold = bold;
     this.width = 595.28; // A4 portrait, points
     this.height = 841.89;
+  }
+
+  get fontSize(): number {
+    return FONT_SIZE * this.scale;
+  }
+
+  get rowHeight(): number {
+    return ROW_HEIGHT * this.scale;
+  }
+
+  /** Vertical space left on the current page. */
+  get available(): number {
+    return this.y - PAGE_MARGIN;
   }
 
   newPage() {
@@ -96,7 +117,7 @@ class PageWriter {
     this.page.drawText(value, {
       x,
       y,
-      size: opts?.size ?? FONT_SIZE,
+      size: (opts?.size ?? FONT_SIZE) * this.scale,
       font: opts?.bold ? this.bold : this.font,
       color: rgb(0.1, 0.1, 0.1),
     });
@@ -105,6 +126,35 @@ class PageWriter {
   line(x1: number, y1: number, x2: number, y2: number) {
     this.page.drawLine({ start: { x: x1, y: y1 }, end: { x: x2, y: y2 }, thickness: 0.5, color: rgb(0.7, 0.7, 0.7) });
   }
+}
+
+/**
+ * Draws a block that should not be split across pages.
+ *
+ * If it fits as-is, nothing changes. If it would overflow by a little, the
+ * whole block is drawn slightly smaller so it still fits on the current page -
+ * that is the point: a section must not wander to the next page just because
+ * of one or two lines. Only when even the smallest allowed size wouldn't help
+ * does the block start on a fresh page.
+ *
+ * `neededHeight` must be measured at scale 1; the helper scales it itself.
+ */
+function drawSection(w: PageWriter, neededHeight: number, render: () => void) {
+  const fits = neededHeight <= w.available;
+  const shrinkTo = w.available / neededHeight;
+
+  if (!fits && shrinkTo >= MIN_SECTION_SCALE) {
+    w.scale = shrinkTo;
+    try {
+      render();
+    } finally {
+      w.scale = 1;
+    }
+    return;
+  }
+
+  if (!fits) w.newPage();
+  render();
 }
 
 function columnWidth(font: PDFFont, header: string, values: string[], size = FONT_SIZE, padding = 16): number {
@@ -160,29 +210,37 @@ function drawTable<Row>(
   rows: Row[],
 ) {
   const tableLeft = PAGE_MARGIN;
+  // Column widths were measured at full size; shrink them with the section so
+  // the table keeps its proportions instead of drifting apart.
+  const colWidth = (raw: number) => raw * w.scale;
   const drawHeader = () => {
     let x = tableLeft;
     for (const col of columns) {
       w.text(col.header, x, w.y, { bold: true });
-      x += col.width;
+      x += colWidth(col.width);
     }
     w.line(tableLeft, w.y - 4, x, w.y - 4);
-    w.y -= ROW_HEIGHT;
+    w.y -= w.rowHeight;
   };
 
   drawHeader();
   for (const row of rows) {
-    w.ensureSpace(ROW_HEIGHT);
+    w.ensureSpace(w.rowHeight);
     let x = tableLeft;
     for (const col of columns) {
       const value = col.get(row);
-      const textX = col.align === "right" ? x + col.width - 8 - w.font.widthOfTextAtSize(value, FONT_SIZE) : x;
+      const textX = col.align === "right" ? x + colWidth(col.width) - 8 - w.font.widthOfTextAtSize(value, w.fontSize) : x;
       w.text(value, textX, w.y);
-      x += col.width;
+      x += colWidth(col.width);
     }
-    w.y -= ROW_HEIGHT;
+    w.y -= w.rowHeight;
   }
   w.y -= 10;
+}
+
+/** Height a table needs at scale 1: header row + one row per entry + gap. */
+function tableHeight(rowCount: number): number {
+  return ROW_HEIGHT * (rowCount + 1) + 10;
 }
 
 function drawResultTable(w: PageWriter, season: PdfSeason, rows: TableRow[]) {
@@ -193,17 +251,19 @@ function drawResultTable(w: PageWriter, season: PdfSeason, rows: TableRow[]) {
   const teamWidth = columnWidth(w.bold, "Mannschaft", teamNames, FONT_SIZE, 24);
   const numWidth = 55;
 
-  drawTable(
-    w,
-    [
-      { header: "Mannschaft", width: teamWidth, get: (r: TableRow) => r.team },
-      { header: "Gewonnen", width: numWidth, align: "right", get: (r: TableRow) => String(r.win) },
-      { header: "Verloren", width: numWidth, align: "right", get: (r: TableRow) => String(r.loose) },
-      { header: "Unentschieden", width: numWidth + 20, align: "right", get: (r: TableRow) => String(r.tied) },
-      { header: "Ringe", width: numWidth, align: "right", get: (r: TableRow) => String(r.rings) },
-      { header: "Punkte", width: numWidth, align: "right", get: (r: TableRow) => String(r.points) },
-    ],
-    rows,
+  drawSection(w, tableHeight(rows.length), () =>
+    drawTable(
+      w,
+      [
+        { header: "Mannschaft", width: teamWidth, get: (r: TableRow) => r.team },
+        { header: "Gewonnen", width: numWidth, align: "right", get: (r: TableRow) => String(r.win) },
+        { header: "Verloren", width: numWidth, align: "right", get: (r: TableRow) => String(r.loose) },
+        { header: "Unentschieden", width: numWidth + 20, align: "right", get: (r: TableRow) => String(r.tied) },
+        { header: "Ringe", width: numWidth, align: "right", get: (r: TableRow) => String(r.rings) },
+        { header: "Punkte", width: numWidth, align: "right", get: (r: TableRow) => String(r.points) },
+      ],
+      rows,
+    ),
   );
 }
 
@@ -215,15 +275,17 @@ function drawPersonalScores(w: PageWriter, season: PdfSeason, ageGroup: string, 
   const shooterWidth = columnWidth(w.bold, "Schütze/inn", rows.map((r) => r.shooter));
   const teamWidth = columnWidth(w.bold, "Mannschaft", rows.map((r) => r.team));
 
-  drawTable(
-    w,
-    [
-      { header: "Schütze/inn", width: shooterWidth, get: (r: PersonalScoreRow) => r.shooter },
-      { header: "Mannschaft", width: teamWidth, get: (r: PersonalScoreRow) => r.team },
-      { header: "Gesamt", width: 70, align: "right", get: (r: PersonalScoreRow) => String(r.total) },
-      { header: "Schnitt", width: 70, align: "right", get: (r: PersonalScoreRow) => String(r.mean) },
-    ],
-    rows,
+  drawSection(w, tableHeight(rows.length), () =>
+    drawTable(
+      w,
+      [
+        { header: "Schütze/inn", width: shooterWidth, get: (r: PersonalScoreRow) => r.shooter },
+        { header: "Mannschaft", width: teamWidth, get: (r: PersonalScoreRow) => r.team },
+        { header: "Gesamt", width: 70, align: "right", get: (r: PersonalScoreRow) => String(r.total) },
+        { header: "Schnitt", width: 70, align: "right", get: (r: PersonalScoreRow) => String(r.mean) },
+      ],
+      rows,
+    ),
   );
 }
 
@@ -238,48 +300,52 @@ function drawScheduleBlock(w: PageWriter, matches: PdfMatch[]) {
   const gridWidth = w.width - PAGE_MARGIN - gridLeft;
   const colWidth = gridWidth / matches.length;
 
-  w.ensureSpace(ROW_HEIGHT * 2 + 8);
   const homeDate = formatDate(matches[0].date);
   const guestDate = formatDate(matches[0].dateGuest);
 
   // Home row.
   if (homeDate) w.text(homeDate, PAGE_MARGIN, w.y);
   matches.forEach((m, i) => w.text(m.homeTeam, gridLeft + i * colWidth, w.y));
-  w.y -= ROW_HEIGHT;
+  w.y -= w.rowHeight;
   // Guest row (falls back to the home date's line spacing when no second date).
   if (guestDate) w.text(guestDate, PAGE_MARGIN, w.y);
   matches.forEach((m, i) => w.text(m.guestTeam, gridLeft + i * colWidth, w.y));
-  w.y -= ROW_HEIGHT - 4;
+  w.y -= w.rowHeight - 4;
   w.line(PAGE_MARGIN, w.y, w.width - PAGE_MARGIN, w.y);
   w.y -= 10;
 }
+
+/** Height of one matchday block at scale 1 (home row + guest row + rule). */
+const SCHEDULE_BLOCK_HEIGHT = ROW_HEIGHT * 2 + 6;
+/** Centered round heading plus its rule. */
+const ROUND_HEADING_HEIGHT = 26;
 
 function drawDates(w: PageWriter, season: PdfSeason, teams: PdfTeam[], matchesByWeek: PdfMatch[][], maxWeek: number, logoImage: PDFImage | null) {
   w.newPage();
   drawScheduleHeader(w, season, logoImage);
 
+  // Each round is one unit: a Hinrunde must not lose its last matchday to the
+  // next page. drawSection shrinks it slightly instead, and only falls back to
+  // a page break when even the smallest allowed size wouldn't fit.
   for (const round of ["hin", "rueck"] as const) {
     const weeks = matchesByWeek.filter((week) => week.length > 0 && roundOfWeek(week[0].week, maxWeek) === round);
     if (weeks.length === 0) continue;
-    w.ensureSpace(ROW_HEIGHT * 3);
-    // Centered round heading between two rules, as in the printed original.
     const heading = round === "hin" ? "Hinrunde" : "Rückrunde";
-    const headingWidth = w.bold.widthOfTextAtSize(heading, 11);
-    w.text(heading, (w.width - headingWidth) / 2, w.y, { size: 11, bold: true });
-    w.y -= 12;
-    w.line(PAGE_MARGIN, w.y, w.width - PAGE_MARGIN, w.y);
-    w.y -= 14;
-    for (const week of weeks) drawScheduleBlock(w, week);
-    w.y -= 8;
+    const needed = ROUND_HEADING_HEIGHT + weeks.length * SCHEDULE_BLOCK_HEIGHT + 8;
+
+    drawSection(w, needed, () => {
+      // Centered round heading between two rules, as in the printed original.
+      const headingWidth = w.bold.widthOfTextAtSize(heading, 11 * w.scale);
+      w.text(heading, (w.width - headingWidth) / 2, w.y, { size: 11, bold: true });
+      w.y -= 12 * w.scale;
+      w.line(PAGE_MARGIN, w.y, w.width - PAGE_MARGIN, w.y);
+      w.y -= 14 * w.scale;
+      for (const week of weeks) drawScheduleBlock(w, week);
+      w.y -= 8;
+    });
   }
 
   w.y -= 6;
-  // Only require room for the heading plus a couple of rows: drawTable breaks
-  // per row anyway, so demanding space for the whole table pushed it onto a
-  // second page even when it comfortably fit under the schedule.
-  w.ensureSpace(ROW_HEIGHT * 4);
-  w.text("Mannschaften", PAGE_MARGIN, w.y, { size: 14, bold: true });
-  w.y -= 22;
 
   const nameWidth = columnWidth(w.bold, "Mannschaft", teams.map((t) => t.name));
   const dayWidth = columnWidth(w.bold, "Trainingstag", teams.map((t) => t.trainingDay ?? "-"));
@@ -288,18 +354,23 @@ function drawDates(w: PageWriter, season: PdfSeason, teams: PdfTeam[], matchesBy
   const contactWidth = columnWidth(w.bold, "Kontaktperson", teams.map((t) => t.contact ?? "-"));
   const phoneWidth = columnWidth(w.bold, "Kontakt", teams.map((t) => t.phone ?? "-"));
 
-  drawTable(
-    w,
-    [
-      { header: "Mannschaft", width: nameWidth, get: (t: PdfTeam) => t.name },
-      { header: "Trainingstag", width: dayWidth, get: (t: PdfTeam) => t.trainingDay ?? "-" },
-      { header: "Uhrzeit", width: timeWidth, get: (t: PdfTeam) => t.trainingTime ?? "-" },
-      { header: "Ort", width: locationWidth, get: (t: PdfTeam) => t.location ?? "-" },
-      { header: "Kontaktperson", width: contactWidth, get: (t: PdfTeam) => t.contact ?? "-" },
-      { header: "Kontakt", width: phoneWidth, get: (t: PdfTeam) => t.phone ?? "-" },
-    ],
-    teams,
-  );
+  // Heading (22) + the table itself - kept together for the same reason.
+  drawSection(w, 22 + tableHeight(teams.length), () => {
+    w.text("Mannschaften", PAGE_MARGIN, w.y, { size: 14, bold: true });
+    w.y -= 22 * w.scale;
+    drawTable(
+      w,
+      [
+        { header: "Mannschaft", width: nameWidth, get: (t: PdfTeam) => t.name },
+        { header: "Trainingstag", width: dayWidth, get: (t: PdfTeam) => t.trainingDay ?? "-" },
+        { header: "Uhrzeit", width: timeWidth, get: (t: PdfTeam) => t.trainingTime ?? "-" },
+        { header: "Ort", width: locationWidth, get: (t: PdfTeam) => t.location ?? "-" },
+        { header: "Kontaktperson", width: contactWidth, get: (t: PdfTeam) => t.contact ?? "-" },
+        { header: "Kontakt", width: phoneWidth, get: (t: PdfTeam) => t.phone ?? "-" },
+      ],
+      teams,
+    );
+  });
 }
 
 // PNG has a fixed 8-byte signature; anything else we optimistically try as
