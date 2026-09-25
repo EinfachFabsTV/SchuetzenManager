@@ -83,6 +83,12 @@ jobs:
       contents: write
     strategy:
       fail-fast: false
+      # Beide Jobs laden dieselbe latest.json herunter, ergaenzen ihre
+      # Plattform und laden sie wieder hoch. Laufen sie gleichzeitig, kann
+      # der zweite Upload scheitern - dann fehlt eine Plattform im Updater
+      # (bei v0.2.3 blieb so nur Linux uebrig). Nacheinander ist langsamer,
+      # aber der Merge kann sich nicht selbst in die Quere kommen.
+      max-parallel: 1
       matrix:
         include:
           - platform: "windows-latest"
@@ -154,3 +160,38 @@ jobs:
           files: ${{ env.PORTABLE_ZIP }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Ein halb hochgeladenes latest.json faellt sonst niemandem auf: der Release
+  # sieht fertig aus, aber die fehlende Plattform bekommt still kein Update
+  # angeboten (so geschehen bei v0.1.2 und v0.2.3). Lieber der Build rot.
+  verify-updater-manifest:
+    needs: build-tauri
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+    steps:
+      - name: Check latest.json covers every platform
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tag = context.ref.replace('refs/tags/', '');
+            const release = await github.rest.repos.getReleaseByTag({ owner: context.repo.owner, repo: context.repo.repo, tag })
+              .catch(() => null);
+            const assets = release ? release.data.assets : [];
+            const manifest = assets.find((a) => a.name === 'latest.json');
+            if (!manifest) throw new Error('latest.json fehlt im Release - der Updater findet kein Update.');
+
+            const res = await github.request(`GET ${manifest.url}`, { headers: { accept: 'application/octet-stream' } });
+            const data = JSON.parse(Buffer.from(res.data).toString('utf8'));
+            const platforms = Object.keys(data.platforms ?? {});
+            core.info(`latest.json: Version ${data.version}, Plattformen: ${platforms.join(', ')}`);
+
+            for (const prefix of ['windows', 'linux']) {
+              if (!platforms.some((p) => p.startsWith(prefix))) {
+                throw new Error(`latest.json enthaelt keine ${prefix}-Plattform (nur: ${platforms.join(', ') || 'keine'}).`);
+              }
+            }
+            const expected = ['SchuetzenManager-portable-windows-x64.zip'];
+            for (const name of expected) {
+              if (!assets.some((a) => a.name === name)) throw new Error(`Asset fehlt im Release: ${name}`);
+            }
