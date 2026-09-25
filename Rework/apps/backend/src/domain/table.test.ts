@@ -76,3 +76,62 @@ test("sorts by points desc, then rings desc, then team name asc", () => {
     ["Dalum 6", "Meppen 1", "Geeste 1"],
   );
 });
+
+test("rundet aufsummierte Ringe, damit keine Fließkomma-Artefakte entstehen", () => {
+  // Zehntelwerte summieren sich in Fließkomma sonst zu 932.4000000000001 auf –
+  // das stand so im PDF und hat dort sogar die Spalten verschoben.
+  const drifting = [300.1, 300.1, 300.1];
+  const table = computeTable(teams, [
+    {
+      homeTeamId: 1,
+      guestTeamId: 2,
+      shoots: [
+        shoot("HOME", drifting[0]),
+        shoot("HOME", drifting[1]),
+        shoot("HOME", drifting[2]),
+        shoot("GUEST", 300.3),
+        shoot("GUEST", 300.3),
+        shoot("GUEST", 300.3),
+      ],
+    },
+  ]);
+  const home = table.find((r) => r.teamId === 1)!;
+  const guest = table.find((r) => r.teamId === 2)!;
+
+  // Unabhängig gemessen: höchstens eine Nachkommastelle, keine Artefaktziffern.
+  for (const value of [home.rings, guest.rings]) {
+    const decimals = (String(value).split(".")[1] ?? "").length;
+    assert.ok(decimals <= 1, `zu viele Nachkommastellen: ${value}`);
+  }
+  // Positivkontrolle: die naive Summe hätte hier tatsächlich gedriftet.
+  const naive = drifting.reduce((a, b) => a + b, 0);
+  assert.ok((String(naive).split(".")[1] ?? "").length > 1, "Testdaten driften nicht – Kontrolle wertlos");
+  assert.equal(home.rings, 900.3);
+});
+
+test("rundet auch über mehrere Wettkampfwochen hinweg", () => {
+  const match = (home: number, guest: number) => ({
+    homeTeamId: 1,
+    guestTeamId: 2,
+    shoots: [
+      shoot("HOME", home),
+      shoot("HOME", home),
+      shoot("HOME", home),
+      shoot("GUEST", guest),
+      shoot("GUEST", guest),
+      shoot("GUEST", guest),
+    ],
+  });
+  // Werte so gewählt, dass die Match-für-Match-Summe ohne Rundung driftet
+  // (siehe Positivkontrolle unten).
+  const table = computeTable(teams, [match(300.1, 250), match(300.3, 250), match(300.1, 250)]);
+  const home = table.find((r) => r.teamId === 1)!;
+  assert.ok((String(home.rings).split(".")[1] ?? "").length <= 1, `driftet: ${home.rings}`);
+  assert.equal(home.rings, 2701.5);
+
+  // Positivkontrolle: dieselbe Reihenfolge ohne Zwischenrundung driftet.
+  const scores = [300.1 + 300.1 + 300.1, 300.3 + 300.3 + 300.3, 300.1 + 300.1 + 300.1];
+  let naive = 0;
+  for (const s of scores) naive += s;
+  assert.ok((String(naive).split(".")[1] ?? "").length > 1, "Testdaten driften nicht – Kontrolle wertlos");
+});

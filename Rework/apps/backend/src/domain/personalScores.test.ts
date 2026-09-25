@@ -76,3 +76,58 @@ test("sorts by total desc, then mean desc, then shooter name asc", () => {
     ["Anna Y", "Bea Z"],
   );
 });
+
+test("rundet die Gesamtsumme, damit keine Fließkomma-Artefakte entstehen", () => {
+  const rows = computePersonalScores(
+    [
+      { homeTeamId: 1, guestTeamId: 2, week: 1, shoots: [shoot("HOME", "Max", "Mustermann", 300.1)] },
+      { homeTeamId: 1, guestTeamId: 2, week: 2, shoots: [shoot("HOME", "Max", "Mustermann", 300.1)] },
+      { homeTeamId: 1, guestTeamId: 2, week: 3, shoots: [shoot("HOME", "Max", "Mustermann", 300.1)] },
+    ],
+    teamNames,
+  );
+  assert.equal(rows[0].total, 900.3);
+  assert.ok((String(rows[0].total).split(".")[1] ?? "").length <= 1, `driftet: ${rows[0].total}`);
+
+  // Positivkontrolle: dieselbe Summe ohne Rundung driftet tatsächlich.
+  let naive = 0;
+  for (let i = 0; i < 3; i++) naive += 300.1;
+  assert.ok((String(naive).split(".")[1] ?? "").length > 1, "Testdaten driften nicht – Kontrolle wertlos");
+});
+
+test("liefert je Schütze die Ergebnisse der einzelnen Wettkampfwochen", () => {
+  const rows = computePersonalScores(
+    [
+      { homeTeamId: 1, guestTeamId: 2, week: 1, shoots: [shoot("HOME", "Max", "Mustermann", 310.5)] },
+      { homeTeamId: 1, guestTeamId: 2, week: 3, shoots: [shoot("HOME", "Max", "Mustermann", 309)] },
+    ],
+    teamNames,
+  );
+  // Woche 2 bleibt leer (null), damit die Spalte im PDF eine Lücke zeigt
+  // statt einer erfundenen 0.
+  assert.deepEqual(rows[0].byWeek, [310.5, null, 309]);
+  assert.equal(rows[0].total, 619.5);
+});
+
+test("addiert mehrere Starts derselben Person in einer Woche", () => {
+  const rows = computePersonalScores(
+    [
+      {
+        homeTeamId: 1,
+        guestTeamId: 2,
+        week: 1,
+        shoots: [shoot("HOME", "Max", "Mustermann", 300.2), shoot("HOME", "Max", "Mustermann", 20.1)],
+      },
+    ],
+    teamNames,
+  );
+  assert.deepEqual(rows[0].byWeek, [320.3]);
+});
+
+test("ohne Wochenangabe bleibt die Wochenliste leer statt zu raten", () => {
+  const rows = computePersonalScores(
+    [{ homeTeamId: 1, guestTeamId: 2, shoots: [shoot("HOME", "Max", "Mustermann", 300)] }],
+    teamNames,
+  );
+  assert.deepEqual(rows[0].byWeek, []);
+});

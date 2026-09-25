@@ -31,3 +31,8 @@ Thumbs.db
 
 # Local archive of built installers (binaries live on GitHub Releases)
 Versionen/
+
+# Arbeitsstand des unlazy-Skills (Prüfskripte, Freigaben, Laufzeitzustand) –
+# maschinenspezifisch, gehört nicht ins Repo.
+.unlazy/
+.unlazy-hook-state.json

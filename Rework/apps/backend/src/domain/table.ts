@@ -1,4 +1,5 @@
 import { computeMatchScore } from "./matchScore.js";
+import { round1 } from "./numbers.js";
 
 export type TableTeam = { id: number; name: string };
 export type TableMatch = {
@@ -39,8 +40,10 @@ export function computeTable(teams: TableTeam[], matches: TableMatch[]): TableRo
     const guestScore = computeMatchScore(primary("GUEST"));
     if (homeScore <= 0 && guestScore <= 0) continue;
 
-    homeRow.rings += homeScore;
-    guestRow.rings += guestScore;
+    // Nach jeder Addition zurückrunden, sonst summiert sich die
+    // Fließkomma-Drift über die Saison auf (932.4000000000001).
+    homeRow.rings = round1(homeRow.rings + homeScore);
+    guestRow.rings = round1(guestRow.rings + guestScore);
 
     if (homeScore > guestScore) {
       homeRow.win++;

@@ -73,8 +73,68 @@ test("every requested section is rendered", async () => {
   const bytes = await generateSeasonPdf(season, {
     dates: { teams: teams(4), matchesByWeek: schedule(6, 2), maxWeek: 6 },
     resultTable: [{ teamId: 1, team: "Beispiel 1", win: 1, loose: 0, tied: 0, rings: 800, points: 2 }],
-    personalScores: [{ shooter: "Max Mustermann", team: "Beispiel 1", ageGroup: "Schützenklasse", total: 280, mean: 280 }],
+    personalScores: [{ shooter: "Max Mustermann", team: "Beispiel 1", ageGroup: "Schützenklasse", total: 280, mean: 280, byWeek: [280] }],
   });
   // Termine, Gesamtergebnis and Einzelergebnisse each start their own page.
   assert.equal((await PDFDocument.load(bytes)).getPageCount(), 3);
+});
+
+// --- Inhaltliche Pruefungen gegen die Vereinsvorlage -------------------------
+// Diese Tests lesen den tatsaechlichen PDF-Text aus, nicht nur die Seitenzahl.
+
+const tableRows = [
+  { teamId: 1, team: "Beispiel 1", win: 13, loose: 1, tied: 0, rings: 13189.7, points: 26 },
+  { teamId: 2, team: "Beispiel 2", win: 12, loose: 2, tied: 0, rings: 13080, points: 24 },
+];
+
+test("schreibt Zahlen deutsch mit Dezimalkomma und Tausenderpunkt", async () => {
+  const { pdfText } = await import("./pdfText.testutil.js");
+  const bytes = await generateSeasonPdf(season, { resultTable: tableRows });
+  const text = await pdfText(bytes);
+
+  assert.ok(text.includes("13.189,7"), `Tausenderpunkt/Dezimalkomma fehlen in: ${text.slice(0, 400)}`);
+  // Ganzzahlige Ringe bekommen keine erfundene Nachkommastelle.
+  assert.ok(text.includes("13.080"), "ganzzahliger Wert nicht deutsch formatiert");
+  // Und keine rohe JavaScript-Zahl mehr.
+  assert.ok(!text.includes("13189.7"), "englische Schreibweise noch vorhanden");
+});
+
+test("zeigt in den Einzelergebnissen Rang, Schnitt und Wochenspalten", async () => {
+  const { pdfText } = await import("./pdfText.testutil.js");
+  const scores = [
+    { shooter: "Max Mustermann", team: "Beispiel 1", ageGroup: "Schützenklasse", total: 931.2, mean: 310.4, byWeek: [310.4, null, 620.8] },
+  ];
+  const bytes = await generateSeasonPdf(season, { personalScores: scores });
+  const text = await pdfText(bytes);
+
+  assert.ok(text.includes("Schnitt"), "Schnitt-Spalte fehlt");
+  assert.ok(text.includes("310,4"), "Schnitt nicht deutsch formatiert");
+  // Wochenspalten 1..3 als Kopfzeile, plus der Rang vor dem Namen.
+  assert.ok(/(^|\s)1\s+2\s+3(\s|$)/m.test(text), `Wochenspalten fehlen in: ${text.slice(0, 400)}`);
+  assert.ok(/1\s+Max Mustermann/.test(text), "Rang fehlt vor dem Namen");
+  // Woche ohne Einsatz bleibt leer statt 0.
+  assert.ok(!/Max Mustermann[^\n]*\s0(\s|$)/.test(text), "leere Woche wurde als 0 gedruckt");
+});
+
+test("stellt die Begegnungen der Woche mit beiden Ergebnissen dar", async () => {
+  const { pdfText } = await import("./pdfText.testutil.js");
+  const bytes = await generateSeasonPdf(season, {
+    weekReport: {
+      week: 14,
+      date: "2026-03-30",
+      dateGuest: "2026-04-05",
+      results: [
+        { homeTeam: "Beispiel 1", homeScore: 936.7, guestTeam: "Beispiel 2", guestScore: 934.3 },
+        { homeTeam: "Beispiel 3", homeScore: 925, guestTeam: "Beispiel 4", guestScore: 934 },
+      ],
+      table: tableRows,
+    },
+  });
+  const text = await pdfText(bytes);
+
+  assert.ok(text.includes("Wettkampfwoche 14"), "Wochenueberschrift fehlt");
+  assert.ok(text.includes("30.03.2026 - 05.04.2026"), "Zeitraum fehlt");
+  assert.ok(text.includes("Heimmannschaft") && text.includes("Gastmannschaft"), "Spaltenkoepfe fehlen");
+  assert.ok(/Beispiel 1\s+936,7\s+Beispiel 2\s+934,3/.test(text), `Begegnung mit Ergebnissen fehlt in: ${text.slice(0, 600)}`);
+  assert.ok(text.includes("Tabelle nach der 14. Wettkampfwoche"), "Tabelle nach der Woche fehlt");
 });

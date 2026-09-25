@@ -1,15 +1,16 @@
 import { PDFDocument, PDFFont, PDFImage, PDFPage, StandardFonts, rgb } from "pdf-lib";
 import type { TableRow } from "./table.js";
 import type { PersonalScoreRow } from "./personalScores.js";
+import type { WeekResultRow } from "./weekResults.js";
+import { formatDe, formatDe1 } from "./numbers.js";
 
-// Functional port of pdf/PDFFactory.java: same three reports (Termine,
-// Gesamtergebnis, Einzelergebnisse), rebuilt with pdf-lib's simpler text/line
-// primitives instead of hand-computed PDFBox column offsets. Column widths
-// are still measured from the actual content (like the legacy
-// calculateXBorders* methods) so long team/shooter names don't clip.
-// Simplification vs. the legacy PDF: no per-competition-week match detail
-// pages, and the Einzelergebnisse table shows season totals/mean only, not
-// the legacy's per-week score matrix.
+// Functional port of pdf/PDFFactory.java: same reports (Termine,
+// Gesamtergebnis, Einzelergebnisse, Wochenbericht), rebuilt with pdf-lib's
+// simpler text/line primitives instead of hand-computed PDFBox column
+// offsets. Column widths are still measured from the actual content (like the
+// legacy calculateXBorders* methods) so long team/shooter names don't clip.
+// Numbers follow the printed club template: German notation via
+// domain/numbers.ts, never a raw JavaScript float.
 
 const PAGE_MARGIN = 50;
 const ROW_HEIGHT = 18;
@@ -58,6 +59,18 @@ export type PdfSections = {
   dates?: { teams: PdfTeam[]; matchesByWeek: PdfMatch[][]; maxWeek: number };
   resultTable?: TableRow[];
   personalScores?: PersonalScoreRow[];
+  /**
+   * Wochenbericht wie Blatt 4 der Vorlage: die Begegnungen einer
+   * Wettkampfwoche mit beiden Ergebnissen, darunter der Tabellenstand nach
+   * dieser Woche.
+   */
+  weekReport?: {
+    week: number;
+    date?: string | null;
+    dateGuest?: string | null;
+    results: WeekResultRow[];
+    table: TableRow[];
+  };
 };
 
 // Hinrunde = weeks 1..ceil(maxWeek/2), Rückrunde the rest (mirrors the
@@ -139,22 +152,32 @@ class PageWriter {
  *
  * `neededHeight` must be measured at scale 1; the helper scales it itself.
  */
-function drawSection(w: PageWriter, neededHeight: number, render: () => void) {
-  const fits = neededHeight <= w.available;
-  const shrinkTo = w.available / neededHeight;
+function drawSection(w: PageWriter, neededHeight: number, render: () => void, neededWidth?: number) {
+  // Überbreite lässt sich – anders als Überlänge – nicht durch einen
+  // Seitenumbruch lösen. Sie muss immer weggeskaliert werden, sonst ragen
+  // Spalten über den Rand oder Werte überlappen ihre Nachbarspalte.
+  const usableWidth = w.width - 2 * PAGE_MARGIN;
+  const widthScale = neededWidth && neededWidth > usableWidth ? usableWidth / neededWidth : 1;
 
-  if (!fits && shrinkTo >= MIN_SECTION_SCALE) {
-    w.scale = shrinkTo;
+  const fits = neededHeight <= w.available;
+  const heightScale = w.available / neededHeight;
+
+  const draw = (scale: number) => {
+    w.scale = scale;
     try {
       render();
     } finally {
       w.scale = 1;
     }
+  };
+
+  if (!fits && heightScale >= MIN_SECTION_SCALE) {
+    draw(Math.min(heightScale, widthScale));
     return;
   }
 
   if (!fits) w.newPage();
-  render();
+  draw(widthScale);
 }
 
 function columnWidth(font: PDFFont, header: string, values: string[], size = FONT_SIZE, padding = 16): number {
@@ -166,20 +189,13 @@ function columnWidth(font: PDFFont, header: string, values: string[], size = FON
   return max + padding;
 }
 
-function drawHeading(w: PageWriter, season: PdfSeason, title: string) {
-  w.text(title, PAGE_MARGIN, w.y, { size: 20, bold: true });
-  w.y -= 26;
-  w.text(`Saison ${season.year}`, PAGE_MARGIN, w.y, { size: 12 });
-  const labelWidth = w.font.widthOfTextAtSize(season.label, 12);
-  w.text(season.label, w.width - PAGE_MARGIN - labelWidth, w.y, { size: 12 });
-  w.y -= 24;
-}
-
-// The Meppen-print header: logo top-left, club name over website beside it,
-// then the "Rundenwettkämpfe" title with the season label right-aligned and
-// "Saison {year}" below it. `logoImage` is pre-embedded by the caller (async
-// embed can't happen inside this sync writer).
-function drawScheduleHeader(w: PageWriter, season: PdfSeason, logoImage: PDFImage | null) {
+/**
+ * Vereinskopf oben links: Logo, darüber/daneben Vereinsname und Website.
+ * Steht in der Vorlage auf JEDEM Blatt, nicht nur auf dem ersten.
+ * `logoImage` ist vom Aufrufer vorab eingebettet (das asynchrone Einbetten
+ * kann in diesem synchronen Schreiber nicht passieren).
+ */
+function drawClubHeader(w: PageWriter, season: PdfSeason, logoImage: PDFImage | null) {
   const top = w.y;
   let textLeft = PAGE_MARGIN;
   if (logoImage) {
@@ -191,6 +207,33 @@ function drawScheduleHeader(w: PageWriter, season: PdfSeason, logoImage: PDFImag
   if (season.headerLine1) w.text(season.headerLine1, textLeft, top - 14, { size: 14, bold: true });
   if (season.headerLine2) w.text(season.headerLine2, textLeft, top - 30, { size: 9 });
   w.y = top - (logoImage ? 48 : 36) - 24;
+}
+
+/**
+ * Überschrift eines Folgeblatts: Vereinskopf, Titel, darunter links die
+ * Saison und rechts die Klassenbezeichnung. `subtitle` steht – wie der
+ * Zeitraum im Wochenbericht der Vorlage – direkt unter dem Titel.
+ */
+function drawHeading(w: PageWriter, season: PdfSeason, title: string, logoImage: PDFImage | null, subtitle?: string) {
+  drawClubHeader(w, season, logoImage);
+  w.text(title, PAGE_MARGIN, w.y, { size: 20, bold: true });
+  w.y -= subtitle ? 20 : 26;
+  if (subtitle) {
+    w.text(subtitle, PAGE_MARGIN, w.y, { size: 11 });
+    w.y -= 18;
+  }
+  w.text(`Saison ${season.year}`, PAGE_MARGIN, w.y, { size: 12 });
+  const labelWidth = w.font.widthOfTextAtSize(season.label, 12);
+  w.text(season.label, w.width - PAGE_MARGIN - labelWidth, w.y, { size: 12 });
+  w.y -= 16;
+  w.line(PAGE_MARGIN, w.y, w.width - PAGE_MARGIN, w.y);
+  w.y -= 18;
+}
+
+// Kopf des Spielplanblatts: Vereinskopf, Titel "Rundenwettkämpfe", darunter
+// Saison links und Klassenbezeichnung rechts.
+function drawScheduleHeader(w: PageWriter, season: PdfSeason, logoImage: PDFImage | null) {
+  drawClubHeader(w, season, logoImage);
 
   w.text("Rundenwettkämpfe", PAGE_MARGIN, w.y, { size: 20, bold: true });
   w.y -= 22;
@@ -206,7 +249,7 @@ function drawScheduleHeader(w: PageWriter, season: PdfSeason, logoImage: PDFImag
 
 function drawTable<Row>(
   w: PageWriter,
-  columns: { header: string; width: number; align?: "left" | "right"; get: (row: Row) => string }[],
+  columns: { header: string; width: number; align?: "left" | "right"; get: (row: Row, index: number) => string }[],
   rows: Row[],
 ) {
   const tableLeft = PAGE_MARGIN;
@@ -224,11 +267,16 @@ function drawTable<Row>(
   };
 
   drawHeader();
-  for (const row of rows) {
+  for (const [index, row] of rows.entries()) {
+    const yBefore = w.y;
     w.ensureSpace(w.rowHeight);
+    // Nach einem Seitenumbruch springt y wieder nach oben. Dann die
+    // Spaltenköpfe wiederholen - eine fortgesetzte Tabelle ohne Kopfzeile
+    // ist nicht lesbar.
+    if (w.y > yBefore) drawHeader();
     let x = tableLeft;
     for (const col of columns) {
-      const value = col.get(row);
+      const value = col.get(row, index);
       const textX = col.align === "right" ? x + colWidth(col.width) - 8 - w.font.widthOfTextAtSize(value, w.fontSize) : x;
       w.text(value, textX, w.y);
       x += colWidth(col.width);
@@ -243,50 +291,113 @@ function tableHeight(rowCount: number): number {
   return ROW_HEIGHT * (rowCount + 1) + 10;
 }
 
-function drawResultTable(w: PageWriter, season: PdfSeason, rows: TableRow[]) {
-  w.newPage();
-  drawHeading(w, season, "Gesamtergebnis");
-
-  const teamNames = rows.map((r) => r.team);
-  const teamWidth = columnWidth(w.bold, "Mannschaft", teamNames, FONT_SIZE, 24);
+/**
+ * Tabellenspalten wie in der Vorlage: führender Rang, dann die Mannschaft und
+ * die Zahlen rechtsbündig. Wird sowohl für das Gesamtergebnis als auch für
+ * den Tabellenstand im Wochenbericht verwendet.
+ */
+function tableColumns(w: PageWriter, rows: TableRow[]) {
+  const rankWidth = columnWidth(w.bold, "", rows.map((_, i) => String(i + 1)), FONT_SIZE, 14);
+  const teamWidth = columnWidth(w.bold, "Mannschaft", rows.map((r) => r.team), FONT_SIZE, 24);
   const numWidth = 55;
-
-  drawSection(w, tableHeight(rows.length), () =>
-    drawTable(
-      w,
-      [
-        { header: "Mannschaft", width: teamWidth, get: (r: TableRow) => r.team },
-        { header: "Gewonnen", width: numWidth, align: "right", get: (r: TableRow) => String(r.win) },
-        { header: "Verloren", width: numWidth, align: "right", get: (r: TableRow) => String(r.loose) },
-        { header: "Unentschieden", width: numWidth + 20, align: "right", get: (r: TableRow) => String(r.tied) },
-        { header: "Ringe", width: numWidth, align: "right", get: (r: TableRow) => String(r.rings) },
-        { header: "Punkte", width: numWidth, align: "right", get: (r: TableRow) => String(r.points) },
-      ],
-      rows,
-    ),
-  );
+  return [
+    { header: "", width: rankWidth, get: (_r: TableRow, i: number) => String(i + 1) },
+    { header: "Mannschaft", width: teamWidth, get: (r: TableRow) => r.team },
+    { header: "Gewonnen", width: numWidth, align: "right" as const, get: (r: TableRow) => String(r.win) },
+    { header: "Verloren", width: numWidth, align: "right" as const, get: (r: TableRow) => String(r.loose) },
+    { header: "Unentschieden", width: numWidth + 20, align: "right" as const, get: (r: TableRow) => String(r.tied) },
+    { header: "Ringe", width: numWidth + 10, align: "right" as const, get: (r: TableRow) => formatDe(r.rings) },
+    { header: "Punkte", width: numWidth, align: "right" as const, get: (r: TableRow) => String(r.points) },
+  ];
 }
 
-function drawPersonalScores(w: PageWriter, season: PdfSeason, ageGroup: string, rows: PersonalScoreRow[]) {
+function drawResultTable(w: PageWriter, season: PdfSeason, rows: TableRow[], logoImage: PDFImage | null) {
+  w.newPage();
+  drawHeading(w, season, "Gesamtergebnis", logoImage);
+  drawSection(w, tableHeight(rows.length), () => drawTable(w, tableColumns(w, rows), rows));
+}
+
+function drawPersonalScores(w: PageWriter, season: PdfSeason, ageGroup: string, rows: PersonalScoreRow[], logoImage: PDFImage | null) {
   if (rows.length === 0) return;
   w.newPage();
-  drawHeading(w, season, `Einzelergebnisse ${ageGroup}`);
+  drawHeading(w, season, `Einzelergebnisse ${ageGroup}`, logoImage);
 
+  const rankWidth = columnWidth(w.bold, "", rows.map((_, i) => String(i + 1)), FONT_SIZE, 14);
   const shooterWidth = columnWidth(w.bold, "Schütze/inn", rows.map((r) => r.shooter));
   const teamWidth = columnWidth(w.bold, "Mannschaft", rows.map((r) => r.team));
 
-  drawSection(w, tableHeight(rows.length), () =>
-    drawTable(
-      w,
-      [
-        { header: "Schütze/inn", width: shooterWidth, get: (r: PersonalScoreRow) => r.shooter },
-        { header: "Mannschaft", width: teamWidth, get: (r: PersonalScoreRow) => r.team },
-        { header: "Gesamt", width: 70, align: "right", get: (r: PersonalScoreRow) => String(r.total) },
-        { header: "Schnitt", width: 70, align: "right", get: (r: PersonalScoreRow) => String(r.mean) },
-      ],
-      rows,
-    ),
-  );
+  // Eine Spalte je Wettkampfwoche, wie auf Blatt 2/3 der Vorlage.
+  // Defensiv: ein fehlendes byWeek darf höchstens die Wochenspalten kosten,
+  // niemals den ganzen Export zum Absturz bringen.
+  const weekCount = rows.reduce((max, r) => Math.max(max, r.byWeek?.length ?? 0), 0);
+  // Breite aus dem tatsächlichen Text ableiten, nicht raten: sonst ragt ein
+  // Wert wie "300,3" aus seiner Spalte in die Nachbarspalte hinein.
+  const weekValues = rows.flatMap((r) => (r.byWeek ?? []).map((v) => (v == null ? "" : formatDe(v))));
+  const weekWidth = weekCount > 0 ? columnWidth(w.bold, String(weekCount), weekValues, FONT_SIZE, 8) : 0;
+  const totalWidth = rankWidth + shooterWidth + teamWidth + 70 + 60 + weekCount * weekWidth;
+
+  const columns = [
+    { header: "", width: rankWidth, get: (_r: PersonalScoreRow, i: number) => String(i + 1) },
+    { header: "Schütze/inn", width: shooterWidth, get: (r: PersonalScoreRow) => r.shooter },
+    { header: "Mannschaft", width: teamWidth, get: (r: PersonalScoreRow) => r.team },
+    { header: "Gesamt", width: 70, align: "right" as const, get: (r: PersonalScoreRow) => formatDe(r.total) },
+    { header: "Schnitt", width: 60, align: "right" as const, get: (r: PersonalScoreRow) => formatDe1(r.mean) },
+    ...Array.from({ length: weekCount }, (_, i) => ({
+      header: String(i + 1),
+      width: weekWidth,
+      align: "right" as const,
+      // Wochen ohne Einsatz bleiben leer statt "0" - wie in der Vorlage.
+      get: (r: PersonalScoreRow) => (r.byWeek?.[i] == null ? "" : formatDe(r.byWeek[i] as number)),
+    })),
+  ];
+
+  drawSection(w, tableHeight(rows.length), () => drawTable(w, columns, rows), totalWidth);
+}
+
+/**
+ * Wochenbericht wie Blatt 4 der Vorlage: Überschrift mit Wettkampfwoche und
+ * Zeitraum, die Begegnungen mit beiden Ergebnissen, darunter der
+ * Tabellenstand nach dieser Woche.
+ */
+function drawWeekReport(
+  w: PageWriter,
+  season: PdfSeason,
+  report: NonNullable<PdfSections["weekReport"]>,
+  logoImage: PDFImage | null,
+) {
+  const from = formatDate(report.date);
+  const to = formatDate(report.dateGuest);
+  // Zeitraum steht in der Vorlage direkt unter der Wochenüberschrift.
+  const span = from && to ? `${from} - ${to}` : from || to;
+
+  w.newPage();
+  drawHeading(w, season, `Wettkampfwoche ${report.week}`, logoImage, span || undefined);
+
+  if (report.results.length > 0) {
+    const homeWidth = columnWidth(w.bold, "Heimmannschaft", report.results.map((r) => r.homeTeam), FONT_SIZE, 24);
+    const guestWidth = columnWidth(w.bold, "Gastmannschaft", report.results.map((r) => r.guestTeam), FONT_SIZE, 24);
+    drawSection(w, tableHeight(report.results.length), () =>
+      drawTable(
+        w,
+        [
+          { header: "Heimmannschaft", width: homeWidth, get: (r: WeekResultRow) => r.homeTeam },
+          { header: "Ergebnis", width: 70, align: "right" as const, get: (r: WeekResultRow) => formatDe(r.homeScore) },
+          { header: "Gastmannschaft", width: guestWidth, get: (r: WeekResultRow) => r.guestTeam },
+          { header: "Ergebnis", width: 70, align: "right" as const, get: (r: WeekResultRow) => formatDe(r.guestScore) },
+        ],
+        report.results,
+      ),
+    );
+  }
+
+  if (report.table.length > 0) {
+    w.y -= 6;
+    drawSection(w, 22 + tableHeight(report.table.length), () => {
+      w.text(`Tabelle nach der ${report.week}. Wettkampfwoche`, PAGE_MARGIN, w.y, { size: 12, bold: true });
+      w.y -= 22 * w.scale;
+      drawTable(w, tableColumns(w, report.table), report.table);
+    });
+  }
 }
 
 // One matchday block in the Meppen layout: a date column on the left, then
@@ -394,12 +505,13 @@ export async function generateSeasonPdf(season: PdfSeason, sections: PdfSections
 
   const logoImage = await embedLogo(doc, season.logo);
   if (sections.dates) drawDates(w, season, sections.dates.teams, sections.dates.matchesByWeek, sections.dates.maxWeek, logoImage);
-  if (sections.resultTable) drawResultTable(w, season, sections.resultTable);
+  if (sections.resultTable) drawResultTable(w, season, sections.resultTable, logoImage);
   if (sections.personalScores) {
     for (const ageGroup of new Set(sections.personalScores.map((s) => s.ageGroup))) {
-      drawPersonalScores(w, season, ageGroup, sections.personalScores.filter((s) => s.ageGroup === ageGroup));
+      drawPersonalScores(w, season, ageGroup, sections.personalScores.filter((s) => s.ageGroup === ageGroup), logoImage);
     }
   }
+  if (sections.weekReport) drawWeekReport(w, season, sections.weekReport, logoImage);
 
   return doc.save();
 }

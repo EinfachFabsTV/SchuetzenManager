@@ -91,7 +91,11 @@ export function SeasonView({
       {section === "PDF-Export" && (
         <div>
           <h2 style={{ fontSize: 15, fontWeight: 600, marginBottom: 12 }}>PDF-Export</h2>
-          <PdfExportButton seasonId={season.id} seasonLabel={`${season.label} ${season.year}`} />
+          <PdfExportButton
+            seasonId={season.id}
+            seasonLabel={`${season.label} ${season.year}`}
+            maxWeek={season.matches.reduce((max, m) => Math.max(max, m.week), 0)}
+          />
         </div>
       )}
     </div>

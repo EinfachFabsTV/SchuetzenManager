@@ -6,11 +6,24 @@ const SECTIONS = [
   { key: "dates", label: "Termine" },
   { key: "table", label: "Gesamtergebnis" },
   { key: "scores", label: "Einzelergebnisse" },
+  { key: "week", label: "Wettkampfwoche" },
 ] as const;
 
-export function PdfExportButton({ seasonId, seasonLabel }: { seasonId: number; seasonLabel: string }) {
+export function PdfExportButton({
+  seasonId,
+  seasonLabel,
+  maxWeek = 0,
+}: {
+  seasonId: number;
+  seasonLabel: string;
+  /** Anzahl der Wettkampfwochen – steuert die Auswahl für den Wochenbericht. */
+  maxWeek?: number;
+}) {
   const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState<Record<string, boolean>>({ dates: true, table: true, scores: true });
+  const [selected, setSelected] = useState<Record<string, boolean>>({ dates: true, table: true, scores: true, week: false });
+  // Vorbelegt mit der letzten Woche: der Wochenbericht wird fast immer für
+  // den zuletzt gespielten Wettkampf gebraucht.
+  const [week, setWeek] = useState(() => (maxWeek > 0 ? maxWeek : 1));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,7 +38,8 @@ export function PdfExportButton({ seasonId, seasonLabel }: { seasonId: number; s
     try {
       // API_BASE (not a relative "/api") so this hits the sidecar backend
       // in the desktop app instead of the Tauri webview origin.
-      const res = await fetch(`${API_BASE}/seasons/${seasonId}/pdf?sections=${sections.join(",")}`);
+      const weekParam = selected.week ? `&week=${week}` : "";
+      const res = await fetch(`${API_BASE}/seasons/${seasonId}/pdf?sections=${sections.join(",")}${weekParam}`);
       if (!res.ok) throw new Error(`PDF-Export fehlgeschlagen (${res.status})`);
       const buffer = await res.arrayBuffer();
       const fileName = `${seasonLabel}.pdf`;
@@ -81,14 +95,34 @@ export function PdfExportButton({ seasonId, seasonLabel }: { seasonId: number; s
           }}
         >
           {SECTIONS.map((s) => (
-            <label key={s.key} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, marginBottom: 8 }}>
-              <input
-                type="checkbox"
-                checked={selected[s.key]}
-                onChange={(e) => setSelected((prev) => ({ ...prev, [s.key]: e.target.checked }))}
-              />
-              {s.label}
-            </label>
+            <div key={s.key}>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, marginBottom: 8 }}>
+                <input
+                  type="checkbox"
+                  checked={selected[s.key]}
+                  onChange={(e) => setSelected((prev) => ({ ...prev, [s.key]: e.target.checked }))}
+                />
+                {s.label}
+              </label>
+              {/* Die Wochenauswahl erscheint nur, wenn der Wochenbericht
+                  gewählt ist – sonst wäre sie eine leere Entscheidung. */}
+              {s.key === "week" && selected.week && (
+                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, marginBottom: 8, paddingLeft: 24, color: theme.textMuted }}>
+                  Woche
+                  <select
+                    value={week}
+                    onChange={(e) => setWeek(Number(e.target.value))}
+                    style={{ flex: 1, background: theme.surfaceAlt, color: theme.text, border: `1px solid ${theme.border}`, borderRadius: 4, padding: "2px 4px" }}
+                  >
+                    {Array.from({ length: Math.max(maxWeek, 1) }, (_, i) => i + 1).map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+            </div>
           ))}
           {error && <p style={{ color: theme.danger, fontSize: 12 }}>{error}</p>}
           <button
