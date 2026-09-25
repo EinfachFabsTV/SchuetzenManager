@@ -31,7 +31,7 @@ jobs:
             // mandatory; every other release stays optional by default.
             const NOTES = {
               'v0.2.2':
-                'Version 0.2.2 – PDF-Export an die Vereinsvorlage angeglichen.\n\n' +
+                '[pflicht] Pflicht-Update auf Version 0.2.2 – PDF-Export an die Vereinsvorlage angeglichen.\n\n' +
                 'Neu:\n' +
                 '- Einzelergebnisse: Platzierung und eine Spalte je Wettkampfwoche, wie auf den Vereinsblättern.\n' +
                 '- Neuer Abschnitt "Wettkampfwoche": die Begegnungen einer Woche mit Ergebnis und der Tabelle nach dieser Woche. Die Woche wird beim Export ausgewählt.\n\n' +
