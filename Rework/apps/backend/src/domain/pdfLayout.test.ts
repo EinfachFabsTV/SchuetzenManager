@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { generateSeasonPdf, type PdfSeason } from "./pdf.js";
+import { pdfPageTexts } from "./pdfText.testutil.js";
 
 // Prüft die geometrische Anordnung, nicht nur den Text: ein Wert darf seine
 // Spalte nicht verlassen. Ein reiner Textvergleich würde eine Überlappung
@@ -85,14 +86,12 @@ test("Kopfzeile und erste Datenzeile bleiben spaltenweise ausgerichtet", async (
 test("wiederholt die Spaltenkoepfe nach einem Seitenumbruch", async () => {
   // Genug Schuetzen, dass die Tabelle sicher umbricht.
   const bytes = await generateSeasonPdf(season, { personalScores: scores(70, 4) });
-  const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs");
-  const doc = await getDocument({ data: bytes, useSystemFonts: true }).promise;
-  assert.ok(doc.numPages >= 2, `erwartete mehrere Seiten, waren ${doc.numPages}`);
+  const pages = await pdfPageTexts(bytes);
+  assert.ok(pages.length >= 2, `erwartete mehrere Seiten, waren ${pages.length}`);
 
   let pagesWithRows = 0;
-  for (let p = 1; p <= doc.numPages; p++) {
-    const page = await doc.getPage(p);
-    const text = (await page.getTextContent()).items.map((i: { str: string }) => i.str).join(" ");
+  for (const [index, text] of pages.entries()) {
+    const p = index + 1;
     // Nur Seiten prüfen, die tatsächlich Datenzeilen tragen – eine reine
     // Überschriftenseite braucht keine Spaltenköpfe.
     if (!text.includes("Max Mustermann")) continue;

@@ -36,3 +36,10 @@ Versionen/
 # maschinenspezifisch, gehört nicht ins Repo.
 .unlazy/
 .unlazy-hook-state.json
+
+# Über "npx skills add" installierte Skills und deren Sperrdatei sowie das
+# Abnahmeprotokoll des unlazy-Skills – lokales Werkzeug, kein Projektcode.
+.agents/
+.claude/skills/
+skills-lock.json
+GATES.md
