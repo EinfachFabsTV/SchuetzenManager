@@ -175,9 +175,13 @@ jobs:
         with:
           script: |
             const tag = context.ref.replace('refs/tags/', '');
-            const release = await github.rest.repos.getReleaseByTag({ owner: context.repo.owner, repo: context.repo.repo, tag })
-              .catch(() => null);
-            const assets = release ? release.data.assets : [];
+            // Der Release ist zu diesem Zeitpunkt noch ein Entwurf, und
+            // getReleaseByTag liefert Entwuerfe nicht zurueck - deshalb ueber
+            // die Liste suchen, die sie enthaelt.
+            const releases = await github.paginate(github.rest.repos.listReleases, { owner: context.repo.owner, repo: context.repo.repo, per_page: 100 });
+            const release = releases.find((r) => r.tag_name === tag);
+            if (!release) throw new Error(`Kein Release zum Tag ${tag} gefunden.`);
+            const assets = release.assets;
             const manifest = assets.find((a) => a.name === 'latest.json');
             if (!manifest) throw new Error('latest.json fehlt im Release - der Updater findet kein Update.');
 
