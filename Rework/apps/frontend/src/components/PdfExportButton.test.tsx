@@ -34,16 +34,31 @@ describe("PdfExportButton", () => {
     expect(screen.getByRole("combobox")).toBeInTheDocument();
   });
 
-  it("bietet jede Wettkampfwoche an und wählt die letzte vor", () => {
+  it("bietet jede Wettkampfwoche plus 'Alle Wochen' an und wählt die letzte vor", () => {
     vi.stubGlobal("fetch", mockFetch());
     render(<PdfExportButton seasonId={1} seasonLabel="Test" maxWeek={10} />);
     open();
     fireEvent.click(screen.getByRole("checkbox", { name: "Wettkampfwoche" }));
 
     const select = screen.getByRole("combobox") as HTMLSelectElement;
-    expect(select.options).toHaveLength(10);
+    // 10 Wochen + "Alle Wochen"
+    expect(select.options).toHaveLength(11);
+    expect(select.options[0].text).toBe("Alle Wochen");
     // Der Wochenbericht wird fast immer für den zuletzt gespielten Wettkampf gebraucht.
     expect(select.value).toBe("10");
+  });
+
+  it("übergibt 'Alle Wochen' als week=all an den Export", async () => {
+    const fetchMock = mockFetch();
+    vi.stubGlobal("fetch", fetchMock);
+    render(<PdfExportButton seasonId={7} seasonLabel="Test" maxWeek={10} />);
+    open();
+    fireEvent.click(screen.getByRole("checkbox", { name: "Wettkampfwoche" }));
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "all" } });
+    fireEvent.click(screen.getByRole("button", { name: "Herunterladen" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    expect(requestedUrl(fetchMock)).toContain("week=all");
   });
 
   it("übergibt die gewählte Woche an den Export", async () => {

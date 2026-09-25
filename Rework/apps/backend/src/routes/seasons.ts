@@ -241,24 +241,30 @@ export const seasonsRoutes: FastifyPluginAsync = async (app) => {
         });
       }
 
-      // Wochenbericht (Blatt 4 der Vorlage): nur wenn der Abschnitt gewählt
-      // und eine gültige Woche übergeben wurde. Die Tabelle darunter zeigt den
-      // Stand NACH dieser Woche, zählt also nur Wochen bis einschließlich week.
-      const requestedWeek = Number(request.query.week);
-      const week = Number.isInteger(requestedWeek) && requestedWeek >= 1 && requestedWeek <= maxWeek ? requestedWeek : null;
-      const weekReport =
-        requested.has("week") && week !== null
-          ? {
-              week,
-              date: dateByWeek.get(week)?.date ?? null,
-              dateGuest: dateByWeek.get(week)?.dateGuest ?? null,
-              results: computeWeekResults(season.matches, teamNamesById, week),
-              table: computeTable(
-                season.teams,
-                season.matches.filter((m) => m.week <= week),
-              ),
-            }
-          : null;
+      // Wochenberichte (Blatt 4 der Vorlage): nur wenn der Abschnitt gewählt
+      // ist. "week=all" gibt jede Wettkampfwoche nacheinander aus, eine Zahl
+      // nur diese eine. Die Tabelle unter einem Bericht zeigt den Stand NACH
+      // dieser Woche, zählt also nur Wochen bis einschließlich week.
+      const weekParam = request.query.week;
+      const requestedWeek = Number(weekParam);
+      const weeks =
+        weekParam === "all"
+          ? Array.from({ length: maxWeek }, (_, i) => i + 1)
+          : Number.isInteger(requestedWeek) && requestedWeek >= 1 && requestedWeek <= maxWeek
+            ? [requestedWeek]
+            : [];
+      const weekReports = requested.has("week")
+        ? weeks.map((week) => ({
+            week,
+            date: dateByWeek.get(week)?.date ?? null,
+            dateGuest: dateByWeek.get(week)?.dateGuest ?? null,
+            results: computeWeekResults(season.matches, teamNamesById, week),
+            table: computeTable(
+              season.teams,
+              season.matches.filter((m) => m.week <= week),
+            ),
+          }))
+        : [];
 
       // Resolve the PDF header: per-season override wins, else global defaults.
       const settings = await prisma.settings.findUnique({ where: { id: 1 } });
@@ -280,7 +286,7 @@ export const seasonsRoutes: FastifyPluginAsync = async (app) => {
           dates: requested.has("dates") ? { teams: season.teams, matchesByWeek, maxWeek } : undefined,
           resultTable: requested.has("table") ? computeTable(season.teams, season.matches) : undefined,
           personalScores: requested.has("scores") ? computePersonalScores(season.matches, teamNamesById) : undefined,
-          weekReport: weekReport ?? undefined,
+          weekReports,
         },
       );
 

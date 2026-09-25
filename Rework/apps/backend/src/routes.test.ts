@@ -183,6 +183,27 @@ test("PDF export returns a valid PDF", async () => {
   assert.equal(res.rawPayload.subarray(0, 5).toString(), "%PDF-");
 });
 
+test("PDF export with week=all covers every competition week", async () => {
+  const season = (await app.inject({ method: "GET", url: `/api/seasons/${seasonId}` })).json();
+  const maxWeek = Math.max(...season.matches.map((m: { week: number }) => m.week));
+  assert.ok(maxWeek >= 2, `Szenario braucht mehrere Wochen, hatte ${maxWeek}`);
+
+  const { pdfText } = await import("./domain/pdfText.testutil.js");
+  const res = await app.inject({ method: "GET", url: `/api/seasons/${seasonId}/pdf?sections=week&week=all` });
+  assert.equal(res.statusCode, 200);
+  const text = await pdfText(new Uint8Array(res.rawPayload));
+
+  for (let week = 1; week <= maxWeek; week++) {
+    assert.ok(text.includes(`Wettkampfwoche ${week}`), `Woche ${week} fehlt beim Export aller Wochen`);
+  }
+
+  // Eine einzelne Woche darf weiterhin nur diese eine enthalten.
+  const single = await app.inject({ method: "GET", url: `/api/seasons/${seasonId}/pdf?sections=week&week=1` });
+  const singleText = await pdfText(new Uint8Array(single.rawPayload));
+  assert.ok(singleText.includes("Wettkampfwoche 1"), "Woche 1 fehlt beim Einzelexport");
+  assert.ok(!singleText.includes("Wettkampfwoche 2"), "Einzelexport enthielt eine fremde Woche");
+});
+
 test("changing the password with the wrong current password fails", async () => {
   const res = await app.inject({
     method: "POST",

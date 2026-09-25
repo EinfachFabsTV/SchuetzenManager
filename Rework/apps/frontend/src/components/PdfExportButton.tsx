@@ -22,8 +22,8 @@ export function PdfExportButton({
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<Record<string, boolean>>({ dates: true, table: true, scores: true, week: false });
   // Vorbelegt mit der letzten Woche: der Wochenbericht wird fast immer für
-  // den zuletzt gespielten Wettkampf gebraucht.
-  const [week, setWeek] = useState(() => (maxWeek > 0 ? maxWeek : 1));
+  // den zuletzt gespielten Wettkampf gebraucht. "all" gibt jede Woche aus.
+  const [week, setWeek] = useState<number | "all">(() => (maxWeek > 0 ? maxWeek : 1));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -111,9 +111,10 @@ export function PdfExportButton({
                   Woche
                   <select
                     value={week}
-                    onChange={(e) => setWeek(Number(e.target.value))}
+                    onChange={(e) => setWeek(e.target.value === "all" ? "all" : Number(e.target.value))}
                     style={{ flex: 1, background: theme.surfaceAlt, color: theme.text, border: `1px solid ${theme.border}`, borderRadius: 4, padding: "2px 4px" }}
                   >
+                    <option value="all">Alle Wochen</option>
                     {Array.from({ length: Math.max(maxWeek, 1) }, (_, i) => i + 1).map((n) => (
                       <option key={n} value={n}>
                         {n}

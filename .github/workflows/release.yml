@@ -30,6 +30,11 @@ jobs:
             // [pflicht] marker as a mandatory update. Only tags listed here are
             // mandatory; every other release stays optional by default.
             const NOTES = {
+              'v0.2.3':
+                '[pflicht] Pflicht-Update auf Version 0.2.3.\n\n' +
+                'Neu:\n' +
+                '- Beim PDF-Export lässt sich für den Abschnitt "Wettkampfwoche" jetzt auch "Alle Wochen" wählen: jede Wettkampfwoche kommt dann auf ein eigenes Blatt, mit ihren Begegnungen und dem Tabellenstand nach dieser Woche.\n\n' +
+                'Deine Daten bleiben beim Update unverändert erhalten.',
               'v0.2.2':
                 '[pflicht] Pflicht-Update auf Version 0.2.2 – PDF-Export an die Vereinsvorlage angeglichen.\n\n' +
                 'Neu:\n' +

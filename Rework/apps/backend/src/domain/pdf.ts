@@ -60,17 +60,20 @@ export type PdfSections = {
   resultTable?: TableRow[];
   personalScores?: PersonalScoreRow[];
   /**
-   * Wochenbericht wie Blatt 4 der Vorlage: die Begegnungen einer
+   * Wochenberichte wie Blatt 4 der Vorlage: die Begegnungen einer
    * Wettkampfwoche mit beiden Ergebnissen, darunter der Tabellenstand nach
-   * dieser Woche.
+   * dieser Woche. Eine Liste, damit beim Export entweder eine einzelne Woche
+   * oder alle Wochen nacheinander ausgegeben werden können.
    */
-  weekReport?: {
-    week: number;
-    date?: string | null;
-    dateGuest?: string | null;
-    results: WeekResultRow[];
-    table: TableRow[];
-  };
+  weekReports?: WeekReport[];
+};
+
+export type WeekReport = {
+  week: number;
+  date?: string | null;
+  dateGuest?: string | null;
+  results: WeekResultRow[];
+  table: TableRow[];
 };
 
 // Hinrunde = weeks 1..ceil(maxWeek/2), Rückrunde the rest (mirrors the
@@ -362,7 +365,7 @@ function drawPersonalScores(w: PageWriter, season: PdfSeason, ageGroup: string, 
 function drawWeekReport(
   w: PageWriter,
   season: PdfSeason,
-  report: NonNullable<PdfSections["weekReport"]>,
+  report: WeekReport,
   logoImage: PDFImage | null,
 ) {
   const from = formatDate(report.date);
@@ -511,7 +514,7 @@ export async function generateSeasonPdf(season: PdfSeason, sections: PdfSections
       drawPersonalScores(w, season, ageGroup, sections.personalScores.filter((s) => s.ageGroup === ageGroup), logoImage);
     }
   }
-  if (sections.weekReport) drawWeekReport(w, season, sections.weekReport, logoImage);
+  for (const report of sections.weekReports ?? []) drawWeekReport(w, season, report, logoImage);
 
   return doc.save();
 }

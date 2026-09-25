@@ -119,16 +119,18 @@ test("zeigt in den Einzelergebnissen Rang, Schnitt und Wochenspalten", async () 
 test("stellt die Begegnungen der Woche mit beiden Ergebnissen dar", async () => {
   const { pdfText } = await import("./pdfText.testutil.js");
   const bytes = await generateSeasonPdf(season, {
-    weekReport: {
-      week: 14,
-      date: "2026-03-30",
-      dateGuest: "2026-04-05",
-      results: [
-        { homeTeam: "Beispiel 1", homeScore: 936.7, guestTeam: "Beispiel 2", guestScore: 934.3 },
-        { homeTeam: "Beispiel 3", homeScore: 925, guestTeam: "Beispiel 4", guestScore: 934 },
-      ],
-      table: tableRows,
-    },
+    weekReports: [
+      {
+        week: 14,
+        date: "2026-03-30",
+        dateGuest: "2026-04-05",
+        results: [
+          { homeTeam: "Beispiel 1", homeScore: 936.7, guestTeam: "Beispiel 2", guestScore: 934.3 },
+          { homeTeam: "Beispiel 3", homeScore: 925, guestTeam: "Beispiel 4", guestScore: 934 },
+        ],
+        table: tableRows,
+      },
+    ],
   });
   const text = await pdfText(bytes);
 
@@ -137,4 +139,27 @@ test("stellt die Begegnungen der Woche mit beiden Ergebnissen dar", async () => 
   assert.ok(text.includes("Heimmannschaft") && text.includes("Gastmannschaft"), "Spaltenkoepfe fehlen");
   assert.ok(/Beispiel 1\s+936,7\s+Beispiel 2\s+934,3/.test(text), `Begegnung mit Ergebnissen fehlt in: ${text.slice(0, 600)}`);
   assert.ok(text.includes("Tabelle nach der 14. Wettkampfwoche"), "Tabelle nach der Woche fehlt");
+});
+
+test("gibt beim Export aller Wochen jede Woche einzeln aus", async () => {
+  const { pdfText } = await import("./pdfText.testutil.js");
+  const weeks = [1, 2, 3];
+  const bytes = await generateSeasonPdf(season, {
+    weekReports: weeks.map((week) => ({
+      week,
+      date: null,
+      dateGuest: null,
+      // Je Woche ein eigenes Ergebnis, damit ein versehentlich mehrfach
+      // gezeichneter Bericht auffaellt statt zufaellig zu passen.
+      results: [{ homeTeam: "Beispiel 1", homeScore: 900 + week, guestTeam: "Beispiel 2", guestScore: 800 + week }],
+      table: tableRows,
+    })),
+  });
+  const text = await pdfText(bytes);
+
+  for (const week of weeks) {
+    assert.ok(text.includes(`Wettkampfwoche ${week}`), `Woche ${week} fehlt im PDF`);
+    assert.ok(text.includes(`Tabelle nach der ${week}. Wettkampfwoche`), `Tabelle zu Woche ${week} fehlt`);
+    assert.ok(text.includes(String(900 + week)), `Ergebnis der Woche ${week} fehlt`);
+  }
 });
