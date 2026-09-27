@@ -30,6 +30,13 @@ jobs:
             // [pflicht] marker as a mandatory update. Only tags listed here are
             // mandatory; every other release stays optional by default.
             const NOTES = {
+              'v0.2.4':
+                '[pflicht] Pflicht-Update auf Version 0.2.4.\n\n' +
+                'Neu:\n' +
+                '- In der Wettkampfliste stehen jetzt die Ringe beider Mannschaften des Spieltags direkt neben dem Erfassungsstand.\n' +
+                '- Der Erfassungsstand ist eingefärbt: grün wenn alle acht Ergebnisse stehen, gelb wenn ein bis zwei fehlen, rot wenn mehr fehlen oder der Wettkampf noch offen ist.\n\n' +
+                'Hinweis: die Ringe in dieser Liste sind die Summe aller vier Schützen. In Tabelle und PDF zählt wie bisher die offizielle Wertung aus den besten drei.\n\n' +
+                'Deine Daten bleiben beim Update unverändert erhalten.',
               'v0.2.3':
                 '[pflicht] Pflicht-Update auf Version 0.2.3.\n\n' +
                 'Neu:\n' +
