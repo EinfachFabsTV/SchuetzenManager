@@ -30,6 +30,11 @@ jobs:
             // [pflicht] marker as a mandatory update. Only tags listed here are
             // mandatory; every other release stays optional by default.
             const NOTES = {
+              'v0.2.5':
+                '[pflicht] Pflicht-Update auf Version 0.2.5.\n\n' +
+                'Behoben:\n' +
+                '- Die Ringe in der Wettkampfliste waren die Summe aller vier Schützen und wichen damit von Tabelle und PDF ab. Gezählt werden jetzt auch dort die besten drei – überall dieselbe Zahl.\n\n' +
+                'Deine Daten bleiben beim Update unverändert erhalten.',
               'v0.2.4':
                 '[pflicht] Pflicht-Update auf Version 0.2.4.\n\n' +
                 'Neu:\n' +
