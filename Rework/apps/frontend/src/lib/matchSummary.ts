@@ -11,7 +11,7 @@ export type MatchSummary = {
   missing: number;
   tone: MatchTone;
   label: string;
-  /** Ringe der Heimmannschaft: Summe aller regulären Schützen dieses Tages. */
+  /** Mannschaftsergebnis der Heimmannschaft nach der offiziellen Wertung. */
   homeRings: number;
   guestRings: number;
 };
@@ -20,8 +20,15 @@ export function summarizeMatch(match: Match): MatchSummary {
   // Ersatzschützen bleiben außen vor – sie zählen auch im Erfassungsstand
   // daneben nicht mit, sonst stünden Zähler und Ringe für verschiedene Sätze.
   const regular = match.shoots.filter((s) => !s.additional);
+  // Dieselbe Wertung wie in Tabelle und PDF (domain/matchScore.ts, dort aus
+  // Match.java übernommen): nur die besten drei der vier Schützen zählen.
   const sumOf = (side: "HOME" | "GUEST") =>
-    regular.filter((s) => s.teamSide === side).reduce((sum, s) => sum + s.result, 0);
+    regular
+      .filter((s) => s.teamSide === side)
+      .map((s) => s.result)
+      .sort((a, b) => b - a)
+      .slice(0, 3)
+      .reduce((sum, r) => sum + r, 0);
 
   const recorded = regular.length;
   const missing = Math.max(SHOOTS_PER_MATCH - recorded, 0);

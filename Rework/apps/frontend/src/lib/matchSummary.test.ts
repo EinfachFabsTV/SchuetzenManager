@@ -35,17 +35,25 @@ const FULL = match([
 ]);
 
 describe("summarizeMatch", () => {
-  it("addiert die Ringe beider Mannschaften", () => {
+  it("wertet wie Tabelle und PDF nur die besten drei Schützen", () => {
     const s = summarizeMatch(FULL);
-    expect(s.homeRings).toBe(1860);
-    expect(s.guestRings).toBe(1291);
-    expect(formatMatchRings(s)).toBe("1.860 / 1.291");
+    // 562 + 523 + 423, der schwächste (352) fällt raus.
+    expect(s.homeRings).toBe(1508);
+    // 456 + 345 + 256, ohne die 234.
+    expect(s.guestRings).toBe(1057);
+    expect(formatMatchRings(s)).toBe("1.508 / 1.057");
+  });
+
+  it("zählt bei weniger als drei Ergebnissen alle vorhandenen", () => {
+    const s = summarizeMatch(match([shoot("HOME", 352), shoot("HOME", 423)]));
+    expect(s.homeRings).toBe(775);
   });
 
   it("zählt Ersatzschützen weder im Stand noch in den Ringen mit", () => {
+    // Der Ersatzschütze wäre mit 999 der beste - er darf trotzdem nicht zählen.
     const s = summarizeMatch(match([...FULL.shoots, shoot("HOME", 999, true)]));
     expect(s.recorded).toBe(8);
-    expect(s.homeRings).toBe(1860);
+    expect(s.homeRings).toBe(1508);
   });
 
   it("ist grün, sobald alle acht Ergebnisse stehen", () => {

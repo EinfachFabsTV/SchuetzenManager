@@ -102,7 +102,8 @@ describe("MatchesTab", () => {
     ];
     render(<MatchesTab season={seasonWith([full])} onMatchSaved={() => {}} onNavigate={() => {}} />);
 
-    expect(screen.getByText("1.860 / 1.291")).toBeInTheDocument();
+    // Beste drei je Seite - dieselbe Wertung wie in Tabelle und PDF.
+    expect(screen.getByText("1.508 / 1.057")).toBeInTheDocument();
     expect(screen.getByText("8/8 erfasst")).toBeInTheDocument();
   });
 
