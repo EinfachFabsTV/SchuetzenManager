@@ -172,22 +172,22 @@ jobs:
   # sieht fertig aus, aber die fehlende Plattform bekommt still kein Update
   # angeboten (so geschehen bei v0.1.2 und v0.2.3). Lieber der Build rot.
   verify-updater-manifest:
-    needs: build-tauri
+    needs: [create-release, build-tauri]
     runs-on: ubuntu-22.04
     permissions:
-      contents: read
+      # Schreibrecht, nicht weil hier etwas geschrieben wird, sondern weil
+      # die API Entwuerfe nur Zugriffen mit Push-Recht zeigt - mit
+      # "contents: read" ist der Release zu diesem Zeitpunkt unsichtbar.
+      contents: write
     steps:
       - name: Check latest.json covers every platform
         uses: actions/github-script@v7
         with:
           script: |
-            const tag = context.ref.replace('refs/tags/', '');
-            // Der Release ist zu diesem Zeitpunkt noch ein Entwurf, und
-            // getReleaseByTag liefert Entwuerfe nicht zurueck - deshalb ueber
-            // die Liste suchen, die sie enthaelt.
-            const releases = await github.paginate(github.rest.repos.listReleases, { owner: context.repo.owner, repo: context.repo.repo, per_page: 100 });
-            const release = releases.find((r) => r.tag_name === tag);
-            if (!release) throw new Error(`Kein Release zum Tag ${tag} gefunden.`);
+            // Genau den Release pruefen, den create-release angelegt hat -
+            // ueber den Tag zu suchen scheitert, solange er ein Entwurf ist.
+            const release_id = Number('${{ needs.create-release.outputs.release_id }}');
+            const { data: release } = await github.rest.repos.getRelease({ owner: context.repo.owner, repo: context.repo.repo, release_id });
             const assets = release.assets;
             const manifest = assets.find((a) => a.name === 'latest.json');
             if (!manifest) throw new Error('latest.json fehlt im Release - der Updater findet kein Update.');
