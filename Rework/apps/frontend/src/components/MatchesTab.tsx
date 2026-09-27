@@ -3,15 +3,17 @@ import type { Match, SeasonDetail } from "../types";
 import { MatchForm } from "./MatchForm";
 import { api } from "../api/client";
 import { roundOfWeek, ROUND_LABEL, type Round } from "../lib/rounds";
+import { formatMatchRings, summarizeMatch, type MatchTone } from "../lib/matchSummary";
 import { theme } from "../theme";
 
 const VIEW_KEY = "schuetzenmanager_matches_view";
 type View = "woche" | "runde";
 
-function matchStatus(match: Match): string {
-  const played = match.shoots.filter((s) => !s.additional).length;
-  return played === 0 ? "offen" : `${played}/8 erfasst`;
-}
+const TONE_COLOR: Record<MatchTone, string> = {
+  complete: theme.green,
+  almost: theme.gold,
+  incomplete: theme.danger,
+};
 
 export function MatchesTab({
   season,
@@ -97,33 +99,46 @@ export function MatchesTab({
       }}
     >
       <div style={{ fontSize: 12, fontWeight: 600, color: theme.textMuted, marginBottom: 6 }}>Woche {week}</div>
-      {(byWeek.get(week) ?? []).map((match) => (
-        <button
-          key={match.id}
-          draggable
-          onDragStart={(e) => e.dataTransfer.setData("text/plain", String(match.id))}
-          onClick={() => setSelectedMatchId(match.id)}
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            width: "100%",
-            textAlign: "left",
-            padding: "10px 14px",
-            marginBottom: 6,
-            border: `1px solid ${theme.border}`,
-            borderRadius: 8,
-            background: theme.surface,
-            color: theme.text,
-            cursor: "grab",
-            fontSize: 13,
-          }}
-        >
-          <span>
-            {match.homeTeam.name} vs. {match.guestTeam.name}
-          </span>
-          <span style={{ color: theme.textMuted }}>{matchStatus(match)}</span>
-        </button>
-      ))}
+      {(byWeek.get(week) ?? []).map((match) => {
+        const summary = summarizeMatch(match);
+        const rings = formatMatchRings(summary);
+        return (
+          <button
+            key={match.id}
+            draggable
+            onDragStart={(e) => e.dataTransfer.setData("text/plain", String(match.id))}
+            onClick={() => setSelectedMatchId(match.id)}
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 12,
+              width: "100%",
+              textAlign: "left",
+              padding: "10px 14px",
+              marginBottom: 6,
+              border: `1px solid ${theme.border}`,
+              borderRadius: 8,
+              background: theme.surface,
+              color: theme.text,
+              cursor: "grab",
+              fontSize: 13,
+            }}
+          >
+            <span>
+              {match.homeTeam.name} vs. {match.guestTeam.name}
+            </span>
+            <span style={{ display: "flex", alignItems: "center", gap: 14, whiteSpace: "nowrap" }}>
+              {/* Ringe links vom Erfassungsstand: die Ampel bleibt so am
+                  rechten Rand untereinander ablesbar. */}
+              {rings && (
+                <span style={{ color: theme.textMuted, fontVariantNumeric: "tabular-nums" }}>{rings}</span>
+              )}
+              <span style={{ color: TONE_COLOR[summary.tone] }}>{summary.label}</span>
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 
