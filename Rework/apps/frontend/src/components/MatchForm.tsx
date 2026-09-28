@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { ShootFormRow } from "../api/client";
 import type { Match } from "../types";
 import { AGE_GROUPS } from "../types";
+import { ShooterNameInput } from "./ShooterNameInput";
+import type { KnownShooter } from "../lib/shooterSuggestions";
 import { theme } from "../theme";
 
 type Row = {
@@ -42,10 +44,13 @@ function toApiRows(rows: Row[]): ShootFormRow[] {
   }));
 }
 
-function ShootRows({ rows, onChange }: { rows: Row[]; onChange: (rows: Row[]) => void }) {
+function ShootRows({ rows, onChange, known }: { rows: Row[]; onChange: (rows: Row[]) => void; known: KnownShooter[] }) {
   function update(i: number, patch: Partial<Row>) {
     onChange(rows.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
   }
+  // Ein Vorschlag setzt immer beide Namensfelder - egal, in welchem getippt
+  // wurde. Die Altersklasse bleibt unangetastet.
+  const pick = (i: number, s: KnownShooter) => update(i, { firstName: s.firstName, lastName: s.lastName });
   const cell: React.CSSProperties = {
     height: 30,
     padding: "0 6px",
@@ -67,8 +72,22 @@ function ShootRows({ rows, onChange }: { rows: Row[]; onChange: (rows: Row[]) =>
       </div>
       {rows.map((row, i) => (
         <div key={i} style={{ display: "grid", gridTemplateColumns: "1.3fr 1.3fr 1.2fr 0.8fr 0.8fr 0.8fr", gap: 6, marginBottom: 6 }}>
-          <input style={cell} value={row.firstName} onChange={(e) => update(i, { firstName: e.target.value })} />
-          <input style={cell} value={row.lastName} onChange={(e) => update(i, { lastName: e.target.value })} />
+          <ShooterNameInput
+            label="Vorname"
+            style={cell}
+            known={known}
+            value={row.firstName}
+            onChange={(v) => update(i, { firstName: v })}
+            onPick={(s) => pick(i, s)}
+          />
+          <ShooterNameInput
+            label="Nachname"
+            style={cell}
+            known={known}
+            value={row.lastName}
+            onChange={(v) => update(i, { lastName: v })}
+            onPick={(s) => pick(i, s)}
+          />
           <select style={cell} value={row.ageGroup} onChange={(e) => update(i, { ageGroup: e.target.value })}>
             {AGE_GROUPS.map((g) => (
               <option key={g} value={g}>
@@ -92,6 +111,16 @@ export function MatchForm({ match, onSaved, onCancel }: { match: Match; onSaved:
   const [additionalGuest, setAdditionalGuest] = useState(() => toFormRows(match.shoots, "GUEST", true, 0));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [known, setKnown] = useState<KnownShooter[]>([]);
+
+  // Bekannte Namen sind reiner Komfort: Schlägt der Abruf fehl, bleibt das
+  // Formular ohne Vorschläge voll benutzbar statt eine Fehlermeldung zu zeigen.
+  useEffect(() => {
+    api
+      .getShooters()
+      .then(setKnown)
+      .catch(() => setKnown([]));
+  }, []);
 
   async function handleSave() {
     setSaving(true);
@@ -114,9 +143,9 @@ export function MatchForm({ match, onSaved, onCancel }: { match: Match; onSaved:
   return (
     <div style={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 12, padding: 20, width: "100%", maxWidth: 1100 }}>
       <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 10 }}>{match.homeTeam.name}</h3>
-      <ShootRows rows={homeShoots} onChange={setHomeShoots} />
+      <ShootRows rows={homeShoots} onChange={setHomeShoots} known={known} />
       <div style={{ fontSize: 12, fontWeight: 600, margin: "8px 0" }}>Zusätzliche Schützen/innen</div>
-      <ShootRows rows={additionalHome} onChange={setAdditionalHome} />
+      <ShootRows rows={additionalHome} onChange={setAdditionalHome} known={known} />
       <button
         type="button"
         onClick={() => setAdditionalHome((prev) => [...prev, emptyRow()])}
@@ -126,9 +155,9 @@ export function MatchForm({ match, onSaved, onCancel }: { match: Match; onSaved:
       </button>
 
       <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 10 }}>{match.guestTeam.name}</h3>
-      <ShootRows rows={guestShoots} onChange={setGuestShoots} />
+      <ShootRows rows={guestShoots} onChange={setGuestShoots} known={known} />
       <div style={{ fontSize: 12, fontWeight: 600, margin: "8px 0" }}>Zusätzliche Schützen/innen</div>
-      <ShootRows rows={additionalGuest} onChange={setAdditionalGuest} />
+      <ShootRows rows={additionalGuest} onChange={setAdditionalGuest} known={known} />
       <button
         type="button"
         onClick={() => setAdditionalGuest((prev) => [...prev, emptyRow()])}

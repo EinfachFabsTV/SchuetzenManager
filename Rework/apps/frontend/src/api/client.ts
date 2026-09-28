@@ -1,3 +1,4 @@
+import type { KnownShooter } from "../lib/shooterSuggestions";
 import type { Match, MatchDate, PersonalScoreRow, Responsible, SeasonDetail, SeasonSummary, TableRow, Team } from "../types";
 
 const TOKEN_KEY = "schuetzenmanager_token";
@@ -87,6 +88,7 @@ export const api = {
   deleteSeason: (id: number) => request<void>(`/seasons/${id}`, { method: "DELETE" }),
   getTable: (id: number) => request<TableRow[]>(`/seasons/${id}/table`),
   getPersonalScores: (id: number) => request<PersonalScoreRow[]>(`/seasons/${id}/personal-scores`),
+  getShooters: () => request<KnownShooter[]>("/shooters"),
   saveMatch: (
     id: number,
     data: {

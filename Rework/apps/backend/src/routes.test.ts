@@ -176,6 +176,51 @@ test("personal scores reflect the saved shoot", async () => {
   assert.ok(scores.some((s: { shooter: string; total: number }) => s.shooter === "Christian Kater" && s.total === 380));
 });
 
+test("known shooters list every saved name once, without empty rows", async () => {
+  // Genau die Faelle herstellen, die der Endpunkt abfangen soll: denselben
+  // Schuetzen ein zweites Mal und eine nicht ausgefuellte Zeile. Ohne sie
+  // wuerde der Test auch bei fehlendem distinct/Leerfilter gruen bleiben.
+  const season = (await app.inject({ method: "GET", url: `/api/seasons/${seasonId}` })).json();
+  const other = season.matches.find((m: { id: number }) => m.id !== matchId);
+  const again = await app.inject({
+    method: "PUT",
+    url: `/api/matches/${other.id}`,
+    headers: { authorization: `Bearer ${token}` },
+    payload: {
+      homeShoots: [
+        { firstName: "Christian", lastName: "Kater", ageGroup: "Schützenklasse", result: 375 },
+        { firstName: "", lastName: "", ageGroup: "Schützenklasse", result: 0 },
+      ],
+      guestShoots: [],
+    },
+  });
+  assert.equal(again.statusCode, 200);
+
+  // Leere Namen legt die Speicherroute gar nicht erst an (matches.ts
+  // ueberspringt sie). In Altbestaenden koennen sie aber stehen, deshalb hier
+  // direkt in die Datenbank geschrieben - sonst prueft die Zusicherung unten
+  // nichts.
+  const { prisma } = await import("./db.js");
+  await prisma.shoot.create({
+    data: { matchId: other.id, firstName: "", lastName: "", ageGroup: "Schützenklasse", teamSide: "GUEST", additional: false, result: 0 },
+  });
+
+  const res = await app.inject({ method: "GET", url: "/api/shooters" });
+  assert.equal(res.statusCode, 200);
+  const shooters: { firstName: string; lastName: string }[] = res.json();
+
+  const kater = shooters.filter((s) => s.firstName === "Christian" && s.lastName === "Kater");
+  assert.equal(kater.length, 1, `Name kam ${kater.length}-mal statt genau einmal vor`);
+  // Nicht ausgefuellte Zeilen sind als Vorschlag wertlos.
+  assert.ok(
+    !shooters.some((s) => s.firstName.trim() === "" && s.lastName.trim() === ""),
+    "leerer Name wurde als Vorschlag geliefert",
+  );
+  // Nach Nachnamen sortiert, damit die Liste im Formular ruhig bleibt.
+  const names = shooters.map((s) => s.lastName);
+  assert.deepEqual(names, [...names].sort((a, b) => a.localeCompare(b)), "Liste war nicht nach Nachnamen sortiert");
+});
+
 test("PDF export returns a valid PDF", async () => {
   const res = await app.inject({ method: "GET", url: `/api/seasons/${seasonId}/pdf` });
   assert.equal(res.statusCode, 200);

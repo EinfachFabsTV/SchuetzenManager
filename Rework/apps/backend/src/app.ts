@@ -11,6 +11,7 @@ import { authRoutes } from "./routes/auth.js";
 import { usersRoutes } from "./routes/users.js";
 import { responsibleRoutes } from "./routes/responsible.js";
 import { settingsRoutes } from "./routes/settings.js";
+import { shootersRoutes } from "./routes/shooters.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -88,6 +89,7 @@ export async function buildApp(options?: { logger?: boolean }) {
   await app.register(teamsRoutes, { prefix: "/api" });
   await app.register(responsibleRoutes, { prefix: "/api" });
   await app.register(settingsRoutes, { prefix: "/api" });
+  await app.register(shootersRoutes, { prefix: "/api" });
 
   // In the Docker image, the built frontend (Rework/apps/frontend/dist) is
   // copied next to this file's compiled output as ./public - see Dockerfile.

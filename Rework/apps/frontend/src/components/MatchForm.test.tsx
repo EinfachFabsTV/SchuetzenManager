@@ -4,7 +4,9 @@ import { MatchForm } from "./MatchForm";
 import { api } from "../api/client";
 import type { Match, Team } from "../types";
 
-vi.mock("../api/client", () => ({ api: { saveMatch: vi.fn() } }));
+// getShooters liefert die Namensvorschlaege; ohne bekannte Namen verhaelt
+// sich das Formular wie vor deren Einfuehrung.
+vi.mock("../api/client", () => ({ api: { saveMatch: vi.fn(), getShooters: vi.fn().mockResolvedValue([]) } }));
 
 const team = (id: number, name: string): Team => ({
   id,
@@ -111,5 +113,33 @@ describe("MatchForm", () => {
 
     expect(await screen.findByText("Match nicht gefunden.")).toBeInTheDocument();
     expect(onSaved).not.toHaveBeenCalled();
+  });
+
+  it("fuellt per Vorschlag beide Namensfelder derselben Zeile", async () => {
+    vi.mocked(api.getShooters).mockResolvedValue([{ firstName: "Christian", lastName: "Kater" }]);
+    render(<MatchForm match={buildMatch()} onSaved={vi.fn()} onCancel={vi.fn()} />);
+
+    // Im Nachnamen-Feld der ersten Zeile tippen, Vorschlag anklicken.
+    const lastNameInputs = screen.getAllByRole("combobox", { name: "Nachname" });
+    fireEvent.change(lastNameInputs[0], { target: { value: "kat" } });
+    fireEvent.click(await screen.findByRole("option", { name: "Kater, Christian" }));
+
+    expect((screen.getAllByRole("combobox", { name: "Vorname" })[0] as HTMLInputElement).value).toBe("Christian");
+    expect((screen.getAllByRole("combobox", { name: "Nachname" })[0] as HTMLInputElement).value).toBe("Kater");
+    // Nur diese eine Zeile - die naechste bleibt leer.
+    expect((screen.getAllByRole("combobox", { name: "Vorname" })[1] as HTMLInputElement).value).toBe("");
+  });
+
+  it("bleibt ohne erreichbare Namensliste benutzbar", async () => {
+    vi.mocked(api.getShooters).mockRejectedValue(new Error("Netzwerk weg"));
+    render(<MatchForm match={buildMatch()} onSaved={vi.fn()} onCancel={vi.fn()} />);
+
+    const lastName = screen.getAllByRole("combobox", { name: "Nachname" })[0];
+    fireEvent.change(lastName, { target: { value: "Neuling" } });
+
+    expect((lastName as HTMLInputElement).value).toBe("Neuling");
+    // Kein Fehlertext, kein Vorschlagsfeld - das Formular funktioniert normal.
+    expect(screen.queryByText(/Netzwerk weg/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
   });
 });
