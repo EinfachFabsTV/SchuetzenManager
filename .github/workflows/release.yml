@@ -30,6 +30,13 @@ jobs:
             // [pflicht] marker as a mandatory update. Only tags listed here are
             // mandatory; every other release stays optional by default.
             const NOTES = {
+              'v0.2.6':
+                '[pflicht] Pflicht-Update auf Version 0.2.6.\n\n' +
+                'Neu:\n' +
+                '- Die Namensfelder beim Eintragen eines Ergebnisses schlagen Schützen vor, die schon einmal erfasst wurden – auch aus früheren Saisons, im Format "Nachname, Vorname".\n' +
+                '- Übernehmen per Klick, Tab oder Enter; mit den Pfeiltasten auswählen, mit Escape schließen. Gesucht wird in Vor- und Nachname, es ist also egal, in welches Feld getippt wird.\n' +
+                '- Es wird nur vorgeschlagen: Mannschaften und Schützen werden weiterhin von Hand eingetragen, und die Altersklasse bleibt unverändert.\n\n' +
+                'Deine Daten bleiben beim Update unverändert erhalten.',
               'v0.2.5':
                 '[pflicht] Pflicht-Update auf Version 0.2.5.\n\n' +
                 'Behoben:\n' +
