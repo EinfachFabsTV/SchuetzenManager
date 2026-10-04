@@ -30,6 +30,13 @@ jobs:
             // [pflicht] marker as a mandatory update. Only tags listed here are
             // mandatory; every other release stays optional by default.
             const NOTES = {
+              'v0.2.7':
+                '[pflicht] Pflicht-Update auf Version 0.2.7.\n\n' +
+                'Behoben:\n' +
+                '- Ab 11 Mannschaften ließ sich keine Saison mehr anlegen: die Erstellung des Spielplans brach mit der Meldung "Konnte keinen gültigen Spielplan erzeugen (zu wenige Mannschaften?)" ab. Der Spielplan wird jetzt nach einem Verfahren erzeugt, das für jede Mannschaftszahl zuverlässig funktioniert – geprüft bis 30 Mannschaften.\n' +
+                '- Das Heimrecht verteilt sich dabei gleichmäßiger: keine Mannschaft tritt in der Hinrunde deutlich häufiger daheim oder auswärts an als die übrigen.\n\n' +
+                'Bestehende Saisons behalten ihren Spielplan unverändert; das neue Verfahren greift erst beim Anlegen einer neuen Saison.\n\n' +
+                'Deine Daten bleiben beim Update unverändert erhalten.',
               'v0.2.6':
                 '[pflicht] Pflicht-Update auf Version 0.2.6.\n\n' +
                 'Neu:\n' +
