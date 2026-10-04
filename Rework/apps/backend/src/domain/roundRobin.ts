@@ -1,103 +1,108 @@
-// Ports model/RandomRoundRobin.java: generates a round-robin schedule via
-// randomized pairing, running 2000 attempts and keeping the one with the
-// best home/guest balance per team. Odd team counts get a bye each week
-// (whichever team is left over once pairs are drawn simply doesn't play).
+// Spielplan nach der Kreismethode: eine Mannschaft steht fest, die übrigen
+// rotieren Woche für Woche um sie herum. Das liefert für jede Teilnehmerzahl
+// einen vollständigen Plan, in dem jede Mannschaft genau einmal gegen jede
+// andere spielt.
+//
+// Der Vorgänger (portiert aus model/RandomRoundRobin.java) hat die Paarungen
+// stattdessen ausgewürfelt und bei einer Sackgasse neu begonnen. Das lief sich
+// mit wachsender Teilnehmerzahl fest: ab 12 Mannschaften scheiterten alle 500
+// Anläufe, eine Saison ließ sich dann gar nicht mehr anlegen.
+//
+// Zufällig bleibt der Plan trotzdem - die Mannschaften gehen in gemischter
+// Reihenfolge in die Rotation, sodass nicht jede Saison dieselben Paarungen
+// in derselben Woche hat.
 
 export type RRTeam = { id: number; name: string };
 export type RRMatch = { homeTeamId: number; guestTeamId: number; week: number };
 
-const RUNS = 2000;
-const MAX_RESTART_ATTEMPTS = 500;
-
-type InternalMatch = { homeIdx: number; guestIdx: number; week: number };
-type Assignment = { matches: InternalMatch[]; score: number; maxWeek: number };
-
-function randomGuestIdx(against: boolean[][], homeIdx: number, n: number): number {
-  for (let i = 0; i < n * 2; i++) {
-    const guestIdx = Math.floor(Math.random() * n);
-    if (guestIdx !== homeIdx && !against[homeIdx][guestIdx]) return guestIdx;
+function shuffled<T>(items: T[]): T[] {
+  const result = [...items];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
   }
-  for (let guestIdx = 0; guestIdx < n; guestIdx++) {
-    if (guestIdx !== homeIdx && !against[homeIdx][guestIdx]) return guestIdx;
-  }
-  return -1;
+  return result;
 }
 
-function findMatch(matches: InternalMatch[], week: number, teamIdx: number) {
-  return matches.find((m) => m.week === week && (m.homeIdx === teamIdx || m.guestIdx === teamIdx));
+/** Größte Heim/Gast-Differenz einer Mannschaft in der Hinrunde; kleiner ist besser. */
+function homeBalancePenalty(matches: RRMatch[], weeksPerHalf: number): number {
+  const balance = new Map<number, number>();
+  for (const m of matches) {
+    if (m.week > weeksPerHalf) break;
+    balance.set(m.homeTeamId, (balance.get(m.homeTeamId) ?? 0) + 1);
+    balance.set(m.guestTeamId, (balance.get(m.guestTeamId) ?? 0) - 1);
+  }
+  let worst = 0;
+  for (const diff of balance.values()) worst = Math.max(worst, Math.abs(diff));
+  return worst;
 }
 
-function randomAssignment(n: number, attempt = 0): Assignment {
-  if (attempt > MAX_RESTART_ATTEMPTS) {
-    throw new Error("Konnte keinen gültigen Spielplan erzeugen (zu wenige Mannschaften?)");
-  }
+function buildSchedule(teams: RRTeam[]): { matches: RRMatch[]; maxWeek: number } {
+  // Bei ungerader Mannschaftszahl pausiert pro Woche eine Mannschaft. Der
+  // Platzhalter null macht die Zahl gerade; seine Begegnungen entfallen.
+  const slots: (RRTeam | null)[] = shuffled(teams);
+  if (slots.length % 2 !== 0) slots.push(null);
 
-  const maxWeekHalf = n % 2 !== 0 ? n : n - 1;
-  const against: boolean[][] = Array.from({ length: n }, () => new Array(n).fill(false));
-  const matches: InternalMatch[] = [];
+  const size = slots.length;
+  const weeksPerHalf = size - 1;
 
-  for (let week = 0; week < maxWeekHalf; week++) {
-    let remaining = Array.from({ length: n }, (_, i) => i);
-    while (remaining.length > 1) {
-      const homeIdx = remaining[Math.floor(Math.random() * remaining.length)];
-      let guestIdx = -1;
-      let count = 0;
-      let found = false;
-      while (!found) {
-        count++;
-        guestIdx = randomGuestIdx(against, homeIdx, n);
-        if (count > 100 || guestIdx === -1) {
-          return randomAssignment(n, attempt + 1);
-        }
-        found = remaining.includes(guestIdx);
-      }
-      matches.push({ homeIdx, guestIdx, week: week + 1 });
-      remaining = remaining.filter((idx) => idx !== homeIdx && idx !== guestIdx);
-      against[homeIdx][guestIdx] = true;
-      against[guestIdx][homeIdx] = true;
+  // Heimrecht bekommt jeweils die Mannschaft, die bisher seltener zu Hause
+  // antrat. Ein festes Muster aus Woche und Platz reicht dafür nicht: durch
+  // die Rotation traf es sonst einzelne Mannschaften immer wieder auswärts
+  // (bei acht Mannschaften eine sogar in allen sieben Wochen der Hinrunde).
+  const balance = new Map<number, number>(); // Heimspiele minus Auswärtsspiele
+
+  const matches: RRMatch[] = [];
+  for (let week = 0; week < weeksPerHalf; week++) {
+    for (let i = 0; i < size / 2; i++) {
+      const a = slots[i];
+      const b = slots[size - 1 - i];
+      if (!a || !b) continue; // spielfrei
+
+      const diffA = balance.get(a.id) ?? 0;
+      const diffB = balance.get(b.id) ?? 0;
+      const aIsHome = diffA !== diffB ? diffA < diffB : Math.random() < 0.5;
+      const home = aIsHome ? a : b;
+      const guest = aIsHome ? b : a;
+
+      balance.set(home.id, (balance.get(home.id) ?? 0) + 1);
+      balance.set(guest.id, (balance.get(guest.id) ?? 0) - 1);
+      matches.push({ homeTeamId: home.id, guestTeamId: guest.id, week: week + 1 });
     }
+    // Rotation: der erste Platz bleibt besetzt, die übrigen rücken weiter.
+    slots.splice(1, 0, slots.pop() as RRTeam | null);
   }
 
-  const firstHalfCount = matches.length;
-  for (let i = 0; i < firstHalfCount; i++) {
+  // Rückrunde: dieselben Begegnungen mit vertauschtem Heimrecht.
+  const firstHalf = matches.length;
+  for (let i = 0; i < firstHalf; i++) {
     const m = matches[i];
-    matches.push({ homeIdx: m.guestIdx, guestIdx: m.homeIdx, week: m.week + maxWeekHalf });
+    matches.push({ homeTeamId: m.guestTeamId, guestTeamId: m.homeTeamId, week: m.week + weeksPerHalf });
   }
 
-  let score = 0;
-  for (let teamIdx = 0; teamIdx < n; teamIdx++) {
-    let homeCount = 0;
-    let guestCount = 0;
-    for (let week = 0; week < maxWeekHalf; week++) {
-      const match = findMatch(matches, week + 1, teamIdx);
-      if (match) {
-        if (match.homeIdx === teamIdx) homeCount++;
-        else guestCount++;
-      }
-    }
-    score += Math.pow(2, Math.abs(homeCount - guestCount));
-  }
-
-  return { matches, score, maxWeek: maxWeekHalf * 2 };
+  return { matches, maxWeek: weeksPerHalf * 2 };
 }
+
+// Der Ausgleich oben entscheidet Begegnung für Begegnung und kann sich dabei
+// festlegen, bevor klar ist, wie die restliche Woche aussieht. Wie schon im
+// Original wird deshalb aus mehreren Spielplänen der ausgewogenste genommen -
+// anders als dort kann dabei aber kein Anlauf mehr scheitern.
+const RUNS = 50;
 
 export function generateSchedule(teams: RRTeam[]): { matches: RRMatch[]; maxWeek: number } {
   if (teams.length < 2) {
     return { matches: [], maxWeek: 0 };
   }
 
-  let best = randomAssignment(teams.length);
-  for (let i = 0; i < RUNS; i++) {
-    const current = randomAssignment(teams.length);
-    if (current.score < best.score) best = current;
+  let best = buildSchedule(teams);
+  let bestPenalty = homeBalancePenalty(best.matches, best.maxWeek / 2);
+  for (let i = 1; i < RUNS && bestPenalty > 1; i++) {
+    const current = buildSchedule(teams);
+    const penalty = homeBalancePenalty(current.matches, current.maxWeek / 2);
+    if (penalty < bestPenalty) {
+      best = current;
+      bestPenalty = penalty;
+    }
   }
-
-  return {
-    maxWeek: best.maxWeek,
-    matches: best.matches.map((m) => ({
-      homeTeamId: teams[m.homeIdx].id,
-      guestTeamId: teams[m.guestIdx].id,
-      week: m.week,
-    })),
-  };
+  return best;
 }
