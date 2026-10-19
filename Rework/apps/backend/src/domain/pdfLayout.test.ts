@@ -21,7 +21,8 @@ type Item = { x: number; width: number; s: string; y: number };
 
 async function items(bytes: Uint8Array, pageNumber: number): Promise<Item[]> {
   const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs");
-  const doc = await getDocument({ data: bytes, useSystemFonts: true }).promise;
+  // Kopie, weil pdfjs den Puffer übernimmt (siehe pdfText.testutil.ts).
+  const doc = await getDocument({ data: new Uint8Array(bytes), useSystemFonts: true }).promise;
   const page = await doc.getPage(pageNumber);
   const content = await page.getTextContent();
   return (content.items as { str: string; width: number; transform: number[] }[])
@@ -99,4 +100,66 @@ test("wiederholt die Spaltenkoepfe nach einem Seitenumbruch", async () => {
     assert.ok(text.includes("Schütze/inn"), `Blatt ${p} setzt die Tabelle ohne Spaltenkoepfe fort`);
   }
   assert.ok(pagesWithRows >= 2, `Tabelle hat nicht umgebrochen (${pagesWithRows} Seite(n) mit Zeilen)`);
+});
+
+test("Tabellen bekommen ein geschlossenes Gitter aus Spalten- und Zeilenlinien", async () => {
+  const { pdfLines, isHorizontal, isVertical } = await import("./pdfText.testutil.js");
+  const rows = 5;
+  const bytes = await generateSeasonPdf(season, { personalScores: scores(rows, 3) });
+  const lines = await pdfLines(bytes, 1);
+
+  const verticals = lines.filter(isVertical);
+  const horizontals = lines.filter(isHorizontal);
+
+  // Rang, Schütze/in, Mannschaft, Gesamt, Schnitt + 3 Wochenspalten = 8
+  // Spalten, also 9 senkrechte Trennlinien.
+  assert.equal(verticals.length, 9, `${verticals.length} senkrechte Linien statt 9`);
+
+  // Waagerecht: Oberkante, unter der Kopfzeile und unter jeder Datenzeile.
+  // Die Linie unter der Blattüberschrift reicht bis zum rechten Seitenrand
+  // und gehört nicht zur Tabelle.
+  const rightEdge = Math.max(...verticals.map((l) => l.x1));
+  const tableHorizontals = horizontals.filter((l) => Math.max(l.x1, l.x2) <= rightEdge + 0.01);
+  assert.equal(tableHorizontals.length, rows + 2, `${tableHorizontals.length} waagerechte Tabellenlinien statt ${rows + 2}`);
+
+  // Alle senkrechten Linien reichen über die volle Tabellenhöhe - sonst
+  // stünde eine Spalte ohne durchgehenden Rahmen da.
+  const top = Math.max(...verticals.map((l) => Math.max(l.y1, l.y2)));
+  const bottom = Math.min(...verticals.map((l) => Math.min(l.y1, l.y2)));
+  for (const v of verticals) {
+    assert.equal(Math.max(v.y1, v.y2), top, `senkrechte Linie bei x=${v.x1} beginnt zu tief`);
+    assert.equal(Math.min(v.y1, v.y2), bottom, `senkrechte Linie bei x=${v.x1} endet zu hoch`);
+  }
+});
+
+test("kein Wert ueberschreibt den Rahmen seiner Zelle", async () => {
+  const { pdfLines, isVertical } = await import("./pdfText.testutil.js");
+  const bytes = await generateSeasonPdf(season, { personalScores: scores(5, 3) });
+  const vLines = (await pdfLines(bytes, 1)).filter(isVertical);
+  const verticals = [...new Set(vLines.map((l) => l.x1))].sort((a, b) => a - b);
+  assert.ok(verticals.length >= 2, "keine Spaltenrahmen gefunden");
+  // Nur was zwischen Ober- und Unterkante des Gitters steht, ist Zellinhalt;
+  // Blatt- und Vereinsüberschrift stehen darüber.
+  const gridTop = Math.max(...vLines.map((l) => Math.max(l.y1, l.y2)));
+  const gridBottom = Math.min(...vLines.map((l) => Math.min(l.y1, l.y2)));
+
+  let checked = 0;
+  for (const item of await items(bytes, 1)) {
+    if (item.y > gridTop || item.y < gridBottom) continue;
+    if (item.x < verticals[0] || item.x > verticals[verticals.length - 1]) continue;
+    checked++;
+    const left = [...verticals].reverse().find((x) => x <= item.x + 0.01);
+    const right = verticals.find((x) => x > item.x + 0.01);
+    if (left === undefined || right === undefined) continue;
+    // Nicht nur innerhalb bleiben, sondern auch Abstand zum Strich halten -
+    // direkt am Rahmen klebender Text liest sich schlecht.
+    assert.ok(
+      item.x + item.width <= right - 1,
+      `"${item.s}" (x ${item.x.toFixed(1)}–${(item.x + item.width).toFixed(1)}) klebt am Rahmen bei ${right} oder ragt darueber`,
+    );
+    assert.ok(item.x >= left + 1, `"${item.s}" (x ${item.x.toFixed(1)}) klebt am linken Rahmen bei ${left}`);
+  }
+  // Ohne diese Zusicherung wäre der Test auch dann grün, wenn der Filter
+  // oben versehentlich jeden Wert aussortiert.
+  assert.ok(checked > 20, `nur ${checked} Zellwerte geprueft - der Filter greift zu scharf`);
 });

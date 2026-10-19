@@ -87,6 +87,8 @@ function roundOfWeek(week: number, maxWeek: number): "hin" | "rueck" {
 // tidiness isn't worth the loss in readability, so the section moves to the
 // next page instead.
 const MIN_SECTION_SCALE = 0.72;
+/** Innenabstand zwischen Zellrahmen und Text, damit nichts am Strich klebt. */
+const CELL_PADDING = 4;
 
 class PageWriter {
   doc: PDFDocument;
@@ -259,33 +261,71 @@ function drawTable<Row>(
   // Column widths were measured at full size; shrink them with the section so
   // the table keeps its proportions instead of drifting apart.
   const colWidth = (raw: number) => raw * w.scale;
-  const drawHeader = () => {
+
+  // Senkrechte Trennlinien: links von der ersten Spalte, zwischen allen
+  // Spalten und rechts von der letzten.
+  const edges = () => {
+    const list = [tableLeft];
     let x = tableLeft;
     for (const col of columns) {
-      w.text(col.header, x, w.y, { bold: true });
+      x += colWidth(col.width);
+      list.push(x);
+    }
+    return list;
+  };
+
+  // Die Zellgrenze liegt etwas unter der Schriftlinie, damit Unterlängen
+  // (g, p, y) nicht auf dem Strich sitzen.
+  const CELL_BOTTOM = 4;
+  let top = 0;
+  let bottom = 0;
+
+  const drawHeader = () => {
+    top = w.y - CELL_BOTTOM + w.rowHeight;
+    let x = tableLeft;
+    for (const col of columns) {
+      w.text(col.header, x + CELL_PADDING, w.y, { bold: true });
       x += colWidth(col.width);
     }
-    w.line(tableLeft, w.y - 4, x, w.y - 4);
+    bottom = w.y - CELL_BOTTOM;
+    w.line(tableLeft, bottom, x, bottom);
     w.y -= w.rowHeight;
+  };
+
+  // Rahmen der bisher gezeichneten Zeilen schließen: Oberkante und die
+  // senkrechten Linien über die volle Höhe dieses Tabellenteils.
+  const closeGrid = () => {
+    const columnEdges = edges();
+    const right = columnEdges[columnEdges.length - 1];
+    w.line(tableLeft, top, right, top);
+    for (const x of columnEdges) w.line(x, top, x, bottom);
   };
 
   drawHeader();
   for (const [index, row] of rows.entries()) {
-    const yBefore = w.y;
-    w.ensureSpace(w.rowHeight);
-    // Nach einem Seitenumbruch springt y wieder nach oben. Dann die
-    // Spaltenköpfe wiederholen - eine fortgesetzte Tabelle ohne Kopfzeile
-    // ist nicht lesbar.
-    if (w.y > yBefore) drawHeader();
+    // Vor dem Seitenumbruch den Rahmen dieser Seite schließen - sonst endet
+    // die Tabelle unten ohne Abschluss.
+    if (w.available < w.rowHeight) {
+      closeGrid();
+      w.newPage();
+      // Eine fortgesetzte Tabelle ohne Spaltenköpfe ist nicht lesbar.
+      drawHeader();
+    }
     let x = tableLeft;
     for (const col of columns) {
       const value = col.get(row, index);
-      const textX = col.align === "right" ? x + colWidth(col.width) - 8 - w.font.widthOfTextAtSize(value, w.fontSize) : x;
+      const textX =
+        col.align === "right"
+          ? x + colWidth(col.width) - CELL_PADDING - w.font.widthOfTextAtSize(value, w.fontSize)
+          : x + CELL_PADDING;
       w.text(value, textX, w.y);
       x += colWidth(col.width);
     }
+    bottom = w.y - CELL_BOTTOM;
+    w.line(tableLeft, bottom, x, bottom);
     w.y -= w.rowHeight;
   }
+  closeGrid();
   w.y -= 10;
 }
 
